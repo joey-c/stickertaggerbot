@@ -1,0 +1,15 @@
+certifi==2017.7.27.1
+click==6.7
+factory-boy==2.9.2
+Faker==0.7.18
+Flask==0.12.2
+Flask-SQLAlchemy==2.2
+future==0.16.0
+itsdangerous==0.24
+Jinja2==2.9.6
+MarkupSafe==1.0
+python-dateutil==2.6.1
+python-telegram-bot==7.0.1
+six==1.10.0
+SQLAlchemy==1.1.13
+Werkzeug==0.12.2

@@ -7,8 +7,8 @@ lock = threading.Lock()
 
 
 class Conversation(object):
-
-    # States should transit as per the listed order, and loop back.
+    # States should transition as per the listed order, and loop back such that
+    # IDLE should precede NEW_STICKER
     class State(enum.Enum):
         NEW_STICKER = 0
         STICKER = 1
@@ -31,17 +31,21 @@ class Conversation(object):
     def is_idle(self):
         return self.state == Conversation.State.IDLE
 
-    def change_state(self, state, future=None):
+    def change_state(self, new_state, future=None):
         if self._future:
             assert self._future.done() == True
 
-        # TODO Enforce state transition order
+        # Enforce state transition order
+        if new_state == Conversation.State.NEW_STICKER:
+            assert self.state == Conversation.State.IDLE
+        else:
+            assert self.state.value == new_state.value - 1
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
-                     " to " + str(state))
+                     " to " + str(new_state))
 
-        self.state = state
+        self.state = new_state
         self._future = future
 
     def get_future_result(self):

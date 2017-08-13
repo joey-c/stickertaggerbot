@@ -32,8 +32,10 @@ class Conversation(object):
         return self.state == Conversation.State.IDLE
 
     def change_state(self, new_state, future=None):
+        # Block until previous state 's action is complete
         if self._future:
-            assert self._future.done() == True
+            while not self._future.done():
+                pass
 
         # Enforce state transition order
         if new_state == Conversation.State.NEW_STICKER:

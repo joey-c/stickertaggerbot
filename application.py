@@ -16,7 +16,6 @@ logging.basicConfig(filename=os.environ["LOG_LOCATION"],
 application = flask_app.Application()
 
 
-
 @application.route("/" + tokens.TELEGRAM, methods=['POST'])
 def route_update():
     update_json = flask.request.get_json()

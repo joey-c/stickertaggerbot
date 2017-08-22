@@ -7,6 +7,7 @@ import telegram.ext
 
 import tokens
 import handlers
+import models
 
 
 class Application(flask.Flask):
@@ -18,6 +19,8 @@ class Application(flask.Flask):
         self.dispatcher = None
         self.dispatcher_thread = None
         self.setup_telegram()
+        self.database = None
+        self.setup_database()
 
     def setup_telegram(self):
         self.bot = telegram.Bot(token=tokens.TELEGRAM)
@@ -28,3 +31,8 @@ class Application(flask.Flask):
                                                   name="dispatcher")
         self.dispatcher_thread.start()
 
+    def setup_database(self):
+        self.database = models.database
+        self.database.init_app(self)
+        with self.app_context():
+            self.database.create_all()

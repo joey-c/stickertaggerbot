@@ -10,8 +10,9 @@ import handlers
 
 
 class Application(flask.Flask):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__(__name__)
+        self.debug = True
         self.bot = None
         self.update_queue = None
         self.dispatcher = None
@@ -27,8 +28,3 @@ class Application(flask.Flask):
                                                   name="dispatcher")
         self.dispatcher_thread.start()
 
-
-def create_app():
-    app = Application(__name__)
-    app.debug = True
-    return app

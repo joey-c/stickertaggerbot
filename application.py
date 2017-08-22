@@ -4,8 +4,8 @@ import os
 import flask
 import telegram
 
-import flask_app
 import tokens
+import flask_app
 
 logging.basicConfig(filename=os.environ["LOG_LOCATION"],
                     level=logging.DEBUG,
@@ -13,7 +13,8 @@ logging.basicConfig(filename=os.environ["LOG_LOCATION"],
                            '%(message)s',
                     datefmt='%d/%m/%Y %I:%M:%S %p')
 
-application = flask_app.create_app()
+application = flask_app.Application()
+
 
 
 @application.route("/" + tokens.TELEGRAM, methods=['POST'])

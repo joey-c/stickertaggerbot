@@ -113,17 +113,20 @@ class Label(database.Model, ModelMixin):
 
 
 class Association(database.Model, ModelMixin):
+    id = database.Column(database.Integer, primary_key=True)
+
     user_id = database.Column(database.Integer,
-                              database.ForeignKey("user.id"),
-                              primary_key=True)
+                              database.ForeignKey("user.id"))
 
     sticker_id = database.Column(database.Integer,
-                                 database.ForeignKey("sticker.id"),
-                                 primary_key=True)
+                                 database.ForeignKey("sticker.id"))
 
     label_id = database.Column(database.Integer,
-                               database.ForeignKey("label.id"),
-                               primary_key=True)
+                               database.ForeignKey("label.id"))
+
+    __table_args__ = (database.UniqueConstraint("user_id",
+                                                "sticker_id",
+                                                "label_id"),)
 
     database.relationship("User", backref="associations", lazy="dynamic")
     database.relationship("Sticker", backref="associations", lazy="dynamic")

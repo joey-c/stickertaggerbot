@@ -41,13 +41,25 @@ class ModelMixin(object):
 
 class User(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
-    username = database.Column(database.String(MAX_STRING_SIZE), unique=True)
-    name = database.Column(database.String(MAX_STRING_SIZE))
 
-    def __init__(self, user_id, username, name):
+    # Length derived from
+    # https://core.telegram.org/method/account.checkUsername
+    username = database.Column(database.String(32), unique=True)
+
+    first_name = database.Column(database.String(MAX_STRING_SIZE))
+    last_name = database.Column(database.String(MAX_STRING_SIZE))
+
+    # Length derived from
+    # https://stackoverflow.com/questions/17848070/what-data-type-should-i-use-for-ietf-language-codes
+    language = database.Column(database.String(35))
+
+    def __init__(self, user_id, first_name, last_name=None, username=None,
+                 language=None):
         self.id = user_id
+        self.first_name = first_name
+        self.last_name = last_name
         self.username = username
-        self.name = name
+        self.language = language
         self.add_to_database()
 
     def __str__(self):
@@ -59,8 +71,13 @@ class User(database.Model, ModelMixin):
 class Sticker(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
 
-    def __init__(self, sticker_id):
+    # Length derived from
+    # http://python-telegram-bot.readthedocs.io/en/stable/telegram.bot.html#telegram.Bot.create_new_sticker_set
+    set = database.Column(database.String(64))
+
+    def __init__(self, sticker_id, set_name=None):
         self.id = sticker_id
+        self.set = set_name
         self.add_to_database()
 
     def __str__(self):

@@ -62,6 +62,16 @@ class User(database.Model, ModelMixin):
         self.language = language
         self.add_to_database()
 
+    # If not present, optional fields (last_name, username, and language_code)
+    # are None
+    @classmethod
+    def from_telegram_user(cls, telegram_user):
+        return cls(telegram_user.id,
+                   telegram_user.first_name,
+                   telegram_user.last_name,
+                   telegram_user.username,
+                   telegram_user.language_code)
+
     def __str__(self):
         return "ID: " + str(self.id) + \
                ", Username: " + str(self.username) + \
@@ -79,6 +89,11 @@ class Sticker(database.Model, ModelMixin):
         self.id = sticker_id
         self.set = set_name
         self.add_to_database()
+
+    @classmethod
+    def from_telegram_sticker(cls, telegram_sticker):
+        return cls(telegram_sticker.file_id,
+                   telegram_sticker.set_name)
 
     def __str__(self):
         return "ID: " + str(self.id)

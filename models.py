@@ -32,6 +32,9 @@ class Sticker(database.Model):
         database.session.add(self)
         database.session.flush()
 
+    def __str__(self):
+        return "ID: " + str(self.id)
+
 
 class Label(database.Model):
     id = database.Column(database.Integer, primary_key=True)
@@ -41,6 +44,10 @@ class Label(database.Model):
         self.text = text
         database.session.add(self)
         database.session.flush()
+
+    def __str__(self):
+        return "ID: " + str(self.id) + \
+               ", Text: " + str(self.text)
 
 
 class Association(database.Model):

@@ -62,6 +62,7 @@ class MessageFactory(factory.Factory):
     chat_id = factory.LazyAttribute(lambda self: self.chat.id)
     sticker = None
     bot = factory.SubFactory(BotFactory)
+    entities = None
 
 
 class MessageEntity(factory.Factory):
@@ -72,6 +73,12 @@ class MessageEntity(factory.Factory):
     type = None
     offset = None
     length = None
+
+
+class CommandMessageFactory(MessageFactory):
+    entities = factory.List([
+        factory.SubFactory(MessageEntity,
+                           type=telegram.MessageEntity.BOT_COMMAND)])
 
 
 class StickerFactory(factory.Factory):
@@ -87,6 +94,10 @@ class StickerFactory(factory.Factory):
     set_name = None
 
 
+class StickerMessageFactory(MessageFactory):
+    sticker = factory.SubFactory(StickerFactory)
+
+
 class UpdateFactory(factory.Factory):
     class Meta:
         model = telegram.Update
@@ -98,3 +109,11 @@ class UpdateFactory(factory.Factory):
     message = None
     inline_query = None
     chosen_inline_result = None
+
+
+class MessageUpdateFactory(UpdateFactory):
+    message = factory.SubFactory(MessageFactory)
+
+
+class CommandUpdateFactory(UpdateFactory):
+    message = factory.SubFactory(CommandMessageFactory)

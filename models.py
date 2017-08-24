@@ -53,6 +53,7 @@ class ModelMixin(object):
 
 class User(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
+    chat_id = database.Column(database.Integer)
 
     # Length derived from
     # https://core.telegram.org/method/account.checkUsername
@@ -65,9 +66,10 @@ class User(database.Model, ModelMixin):
     # https://stackoverflow.com/questions/17848070/what-data-type-should-i-use-for-ietf-language-codes
     language = database.Column(database.String(35))
 
-    def __init__(self, user_id, first_name, last_name=None, username=None,
-                 language=None):
+    def __init__(self, user_id, chat_id, first_name, last_name=None,
+                 username=None, language=None):
         self.id = user_id
+        self.chat_id = chat_id
         self.first_name = first_name
         self.last_name = last_name
         self.username = username
@@ -77,8 +79,9 @@ class User(database.Model, ModelMixin):
     # If not present, optional fields (last_name, username, and language_code)
     # are None
     @classmethod
-    def from_telegram_user(cls, telegram_user):
+    def from_telegram_user(cls, telegram_user, chat_id):
         return cls(telegram_user.id,
+                   chat_id,
                    telegram_user.first_name,
                    telegram_user.last_name,
                    telegram_user.username,

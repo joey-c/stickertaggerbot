@@ -1,3 +1,5 @@
+import logging
+
 import flask_sqlalchemy as fsa
 from sqlalchemy import literal
 from sqlalchemy.sql.functions import func
@@ -6,6 +8,17 @@ from sqlalchemy.sql.functions import func
 
 MAX_STRING_SIZE = 80
 database = fsa.SQLAlchemy()
+
+sqlalchemy_loggers = ["sqlalchemy.engine",
+                      "sqlalchemy.dialects",
+                      "sqlalchemy.pool",
+                      "sqlalchemy.orm"]
+
+
+def sqlalchemy_logging(log=False, level=logging.DEBUG):
+    if log:
+        for logger in sqlalchemy_loggers:
+            logging.getLogger(logger).setLevel(level)
 
 
 class ModelMixin(object):
@@ -32,7 +45,6 @@ class ModelMixin(object):
             return database.session.query(func.count(field)).scalar()
         else:
             return database.session.query(func.count(cls.id)).scalar()
-
 
     def add_to_database(self):
         database.session.add(self)

@@ -8,6 +8,8 @@ future==0.16.0
 itsdangerous==0.24
 Jinja2==2.9.6
 MarkupSafe==1.0
+py==1.4.34
+pytest==3.2.1
 python-dateutil==2.6.1
 python-telegram-bot==7.0.1
 six==1.10.0

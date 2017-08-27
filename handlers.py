@@ -39,6 +39,13 @@ def command_start_handler(bot, update):
     bot.send_message(user.chat_id, Message.Instruction.START.value)
 
 
+def sticker_is_new(user, sticker):
+    subquery = models.Association.query.filter_by(user_id=user.id,
+                                                  sticker_id=sticker.id)
+    count = subquery.count()
+    return count == 0
+
+
 # Create a conversation upon receiving a sticker,
 # or prompt to cancel previous conversations
 @run_async
@@ -54,26 +61,22 @@ def sticker_handler(bot, update):
         if conversation.is_idle():
             conversation.change_state(
                 conversations.Conversation.State.STICKER,
-                pool.submit(check_sticker, user, sticker))
+                pool.submit(sticker_is_new, user, sticker))
         else:
             logger.debug("Conversation is not idle")
             bot.send_message(Message.Error.RESTART)
 
-    sticker_is_new = conversation.get_future_result()
+    new_sticker = conversation.get_future_result()
 
-    if sticker_is_new:
+    if new_sticker:
         bot.send_message(user.chat_id, Message.Instruction.LABEL)
-    elif sticker_is_new is False:
+    elif new_sticker is False:
         logger.debug("Sticker exists")
         bot.send_message(user.chat_id, Message.Error.STICKER_EXISTS)
         # TODO Ask user if they meant to change the sticker's labels
     else:
         logger.debug("Future timed out")
         bot.send_message(user.chat_id, Message.Error.UNKNOWN)
-
-
-def check_sticker(user, sticker):
-    pass
 
 
 @run_async

@@ -4,6 +4,7 @@ import enum
 
 all = {}
 lock = threading.Lock()
+logger = logging.getLogger("conversations")
 
 
 class Conversation(object):
@@ -52,3 +53,20 @@ class Conversation(object):
 
     def get_future_result(self):
         return self._future.result()
+
+
+def get_or_create(telegram_user, get_only=False):
+    conversation = None
+    user_id = telegram_user.id
+
+    with lock:
+        logger.debug("Acquired conversations lock")
+        if user_id in all:
+            logger.debug("User " + str(user_id) + "found")
+            conversation = all[user_id]
+        elif not get_only:
+            logger.debug("Creating new conversation")
+            conversation = Conversation(telegram_user)
+            all[user_id] = conversation
+
+    return conversation

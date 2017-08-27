@@ -1,5 +1,5 @@
-import logging
 import concurrent.futures
+import logging
 from enum import Enum
 
 import telegram.ext
@@ -36,26 +36,13 @@ def command_start_handler(bot, update):
     bot.send_message(user.chat_id, Message.Instruction.START.value)
 
 
-# Only create a conversation upon /newsticker.
+# Create a conversation upon /newsticker.
 @run_async
 def command_new_sticker_handler(bot, update):
     logger = logging.getLogger("handler.command_new_sticker")
     logger.debug("Handling /newsticker")
 
-    telegram_user = update.effective_user
-    user_id = telegram_user.id
-
-    # Retrieve conversation, or create if non-existent
-    conversation = None
-    with conversations.lock:
-        logger.debug("Acquired conversations lock")
-        if user_id in conversations.all:
-            conversation = conversations.all[user_id]
-        else:
-            logger.debug("Creating new conversation")
-            conversation = conversations.Conversation(telegram_user)
-            conversations.all[user_id] = conversation
-
+    conversation = conversations.get_or_create(update.effective_user)
     with conversation.lock:
         if conversation.is_idle():
             conversation.change_state(
@@ -69,11 +56,12 @@ def new_sticker_handler(bot, update):
     user = update.effective_user
     sticker = update.effective_message.sticker
 
-    # TODO Handle case where this update arrives before /newsticker
-    if user not in conversations.all:
+    conversation = conversations.get_or_create(user, get_only=True)
+
+    # TODO Handle edge case where this update arrives before /newsticker
+    if not conversation:
         return
 
-    conversation = conversations.all[user.id]
     with conversation.lock:
         conversation.change_state(conversations.Conversation.State.STICKER,
                                   pool.submit(check_sticker, user, sticker))
@@ -96,11 +84,12 @@ def check_sticker(user, sticker):
 def sticker_name_handler(bot, update):
     user = update.effective_user
 
-    if user not in conversations.all:
-        # TODO Send error message
+    conversation = conversations.get_or_create(user, get_only=True)
+
+    # TODO Send error message
+    if not conversation:
         return
 
-    conversation = conversations.all[user.id]
     with conversation.lock:
         conversation.change_state(
             conversations.Conversation.State.LABEL,
@@ -116,8 +105,10 @@ def confirm_sticker_name(bot, update):
 def confirmation_handler(bot, update):
     user = update.effective_user
 
-    if user not in conversations.all:
-        # TODO Send error message
+    conversation = conversations.get_or_create(user, get_only=True)
+
+    # TODO Send error message
+    if not conversation:
         return
 
     text = update.effective_message.text.lower()

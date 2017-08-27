@@ -21,6 +21,8 @@ class Message(object):
     class Error(Enum):
         NOT_STARTED = ""
         STICKER_EXISTS = ""
+        UNKNOWN = ""
+        RESTART = ""  # TODO Prompt to cancel or resume previous chain
 
     class Other(Enum):
         SUCCESS = ""
@@ -37,42 +39,37 @@ def command_start_handler(bot, update):
     bot.send_message(user.chat_id, Message.Instruction.START.value)
 
 
-# Create a conversation upon /newsticker.
+# Create a conversation upon receiving a sticker,
+# or prompt to cancel previous conversations
 @run_async
-def command_new_sticker_handler(bot, update):
-    logger = logging.getLogger("handler.command_new_sticker")
-    logger.debug("Handling /newsticker")
+def sticker_handler(bot, update):
+    logger = logging.getLogger("handler.sticker")
+    logger.debug("Handling sticker")
 
-    conversation = conversations.get_or_create(update.effective_user)
-    with conversation.lock:
-        if conversation.is_idle():
-            conversation.change_state(
-                conversations.Conversation.State.NEW_STICKER)
-        else:
-            pass  # TODO Handle interruption of previous chain
-
-
-@run_async
-def new_sticker_handler(bot, update):
     user = update.effective_user
     sticker = update.effective_message.sticker
 
-    conversation = conversations.get_or_create(user, get_only=True)
-
-    # TODO Handle edge case where this update arrives before /newsticker
-    if not conversation:
-        return
-
+    conversation = conversations.get_or_create(user)
     with conversation.lock:
-        conversation.change_state(conversations.Conversation.State.STICKER,
-                                  pool.submit(check_sticker, user, sticker))
+        if conversation.is_idle():
+            conversation.change_state(
+                conversations.Conversation.State.STICKER,
+                pool.submit(check_sticker, user, sticker))
+        else:
+            logger.debug("Conversation is not idle")
+            bot.send_message(Message.Error.RESTART)
 
     sticker_is_new = conversation.get_future_result()
+
     if sticker_is_new:
         bot.send_message(user.chat_id, Message.Instruction.LABEL)
-    else:
+    elif sticker_is_new is False:
+        logger.debug("Sticker exists")
         bot.send_message(user.chat_id, Message.Error.STICKER_EXISTS)
         # TODO Ask user if they meant to change the sticker's labels
+    else:
+        logger.debug("Future timed out")
+        bot.send_message(user.chat_id, Message.Error.UNKNOWN)
 
 
 def check_sticker(user, sticker):
@@ -135,17 +132,14 @@ def inline_query_handler(bot, update):
     pass
 
 
+# TODO Handle unrecognized commands
 def register_handlers(dispatcher):
     dispatcher.add_handler(
         telegram.ext.CommandHandler("start", command_start_handler))
 
     dispatcher.add_handler(
-        telegram.ext.CommandHandler("newsticker",
-                                    command_new_sticker_handler))
-
-    dispatcher.add_handler(
         telegram.ext.MessageHandler(telegram.ext.Filters.sticker,
-                                    new_sticker_handler))
+                                    sticker_handler))
 
     dispatcher.add_handler(
         telegram.ext.MessageHandler(telegram.ext.Filters.text,

@@ -8,14 +8,15 @@ logger = logging.getLogger("conversations")
 
 
 class Conversation(object):
-    # States should transition as per the listed order, and loop back such that
-    # IDLE should precede NEW_STICKER
+    # States should typically transition as per the listed order
+    # STICKER may hijack the order if the user sends a new sticker
+    #   and cancels the previous chain.
+    # LABEL may repeat if user replies negatively to confirmation
     class State(enum.Enum):
-        NEW_STICKER = 0
+        IDLE = 0
         STICKER = 1
         LABEL = 2
         CONFIRMED = 3
-        IDLE = 4
 
     def __init__(self, user):
         self.user = user
@@ -32,24 +33,35 @@ class Conversation(object):
     def is_idle(self):
         return self.state == Conversation.State.IDLE
 
-    def change_state(self, new_state, future=None):
-        # Block until previous state 's action is complete
-        if self._future:
+
+    def __change_state(self, new_state, future):
+        self.state = new_state
+        self._future.cancel()
+        self._future = future
+
+    def change_state(self, new_state, future=None, force=False):
+        if force:
+            self.__change_state(new_state, future)
+
+        # Block until previous state's action is complete
+        elif self._future:
             while not self._future.done():
                 pass
 
         # Enforce state transition order
-        if new_state == Conversation.State.NEW_STICKER:
+        if new_state == Conversation.State.STICKER:
             assert self.state == Conversation.State.IDLE
-        else:
-            assert self.state.value == new_state.value - 1
+        elif new_state == Conversation.State.LABEL:
+            assert (self.state == Conversation.State.STICKER or
+                    self.state == Conversation.State.LABEL)
+        elif new_state == Conversation.State.CONFIRMED:
+            assert self.state == Conversation.State.LABEL
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
                      " to " + str(new_state))
 
-        self.state = new_state
-        self._future = future
+        self.__change_state(new_state, future)
 
     def get_future_result(self):
         return self._future.result()

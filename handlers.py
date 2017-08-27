@@ -1,5 +1,6 @@
 import logging
 import concurrent.futures
+from enum import Enum
 
 import telegram.ext
 from telegram.ext.dispatcher import run_async
@@ -7,6 +8,20 @@ from telegram.ext.dispatcher import run_async
 import conversations
 
 pool = concurrent.futures.ThreadPoolExecutor
+
+
+class Message(object):
+    class Instruction(Enum):
+        START = ""
+        LABEL = ""
+        CONFIRM = ""
+
+    class Error(Enum):
+        NOT_STARTED = ""
+        STICKER_EXISTS = ""
+
+    class Other(Enum):
+        SUCCESS = ""
 
 
 def command_start_handler(bot, update):

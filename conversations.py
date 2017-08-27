@@ -66,8 +66,12 @@ class Conversation(object):
 
         self.__change_state(new_state, future)
 
-    def get_future_result(self):
-        return self._future.result()
+    # timeout in seconds
+    def get_future_result(self, timeout=3):
+        try:
+            return self._future.result(timeout=timeout)
+        except TimeoutError:
+            return None
 
 
 def get_or_create(telegram_user, get_only=False):

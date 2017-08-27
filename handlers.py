@@ -15,6 +15,7 @@ class Message(object):
     class Instruction(Enum):
         START = ""
         LABEL = ""
+        RE_LABEL = ""
         CONFIRM = ""
 
     class Error(Enum):
@@ -68,12 +69,10 @@ def new_sticker_handler(bot, update):
 
     sticker_is_new = conversation.get_future_result()
     if sticker_is_new:
-        # TODO Send message to user to continue
-        pass
+        bot.send_message(user.chat_id, Message.Instruction.LABEL)
     else:
-        # TODO Send error message to user
+        bot.send_message(user.chat_id, Message.Error.STICKER_EXISTS)
         # TODO Ask user if they meant to change the sticker's labels
-        pass
 
 
 def check_sticker(user, sticker):
@@ -86,8 +85,8 @@ def sticker_name_handler(bot, update):
 
     conversation = conversations.get_or_create(user, get_only=True)
 
-    # TODO Send error message
     if not conversation:
+        bot.send_message(user.chat_id, Message.Error.NOT_STARTED)
         return
 
     with conversation.lock:
@@ -107,8 +106,8 @@ def confirmation_handler(bot, update):
 
     conversation = conversations.get_or_create(user, get_only=True)
 
-    # TODO Send error message
     if not conversation:
+        bot.send_message(user.chat_id, Message.Error.NOT_STARTED)
         return
 
     text = update.effective_message.text.lower()
@@ -119,15 +118,17 @@ def confirmation_handler(bot, update):
                 conversations.Conversation.State.LABEL,
                 pool.submit(add_sticker, bot, update, conversation))
     else:
-        # TODO Send message to label again
-        pass
+        bot.send_message(user.chat_id, Message.Instruction.RE_LABEL)
 
 
 def add_sticker(bot, update, conversation):
+    user = update.effective_user
+
     # TODO Add sticker
-    # TODO Send success message
+
+    bot.send_message(user.chat_id, Message.Other.SUCCESS)
+
     # TODO Change conversation state to IDLE
-    pass
 
 
 def inline_query_handler(bot, update):

@@ -34,17 +34,19 @@ def command_new_sticker_handler(bot, update):
     logger = logging.getLogger("handler.command_new_sticker")
     logger.debug("Handling /newsticker")
 
-    user = update.effective_user
+    telegram_user = update.effective_user
+    user_id = telegram_user.id
 
+    # Retrieve conversation, or create if non-existent
     conversation = None
     with conversations.lock:
         logger.debug("Acquired conversations lock")
-        if user in conversations.all:
-            conversation = conversations.all[user.id]
+        if user_id in conversations.all:
+            conversation = conversations.all[user_id]
         else:
             logger.debug("Creating new conversation")
-            conversation = conversations.Conversation(user)
-            conversations.all[user.id] = conversation
+            conversation = conversations.Conversation(telegram_user)
+            conversations.all[user_id] = conversation
 
     with conversation.lock:
         if conversation.is_idle():

@@ -1,26 +1,12 @@
 import models
-from application import application as app
+from tests.misc import clear_all_tables, app_for_testing
 
 models.sqlalchemy_logging(True)
 
 
-def clear_tables(tables):
-    for table in tables:
-        models.database.session.query(table).delete()
-
-    models.database.session.flush()
-
-
-def clear_all_tables():
-    clear_tables([models.User,
-                  models.Sticker,
-                  models.Label,
-                  models.Association])
-
-
 class TestInsertion(object):
     def test_insertion_basic(self):
-        with app.app_context():
+        with app_for_testing.app_context():
             user_id = 123
             sticker_id = 456
             user = models.User(user_id, "username", "name")
@@ -43,7 +29,7 @@ class TestInsertion(object):
             clear_all_tables()
 
     def test_insertion_overlapping(self):
-        with app.app_context():
+        with app_for_testing.app_context():
             user_id = 123
             sticker_id = 456
             user = models.User(user_id, "username", "name")
@@ -75,7 +61,7 @@ class TestInsertion(object):
             clear_all_tables()
 
     def test_duplicates(self):
-        with app.app_context():
+        with app_for_testing.app_context():
             user_id = 123
             sticker_id = 456
             user = models.User(user_id, "username", "name")

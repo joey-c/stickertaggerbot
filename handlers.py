@@ -1,16 +1,39 @@
 import logging
 import concurrent.futures
+from enum import Enum
 
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
 import conversations
+import models
 
 pool = concurrent.futures.ThreadPoolExecutor
 
 
+class Message(object):
+    class Instruction(Enum):
+        START = ""
+        LABEL = ""
+        CONFIRM = ""
+
+    class Error(Enum):
+        NOT_STARTED = ""
+        STICKER_EXISTS = ""
+
+    class Other(Enum):
+        SUCCESS = ""
+
+
+# Add user to database if user is new
 def command_start_handler(bot, update):
-    pass
+    user = models.User.get(update.effective_user.id)
+    if not user:
+        chat_id = update.effective_chat.id
+        user = models.User.from_telegram_user(update.effective_user, chat_id)
+    models.database.session.commit()
+
+    bot.send_message(user.chat_id, Message.Instruction.START.value)
 
 
 # Only create a conversation upon /newsticker.
@@ -19,17 +42,19 @@ def command_new_sticker_handler(bot, update):
     logger = logging.getLogger("handler.command_new_sticker")
     logger.debug("Handling /newsticker")
 
-    user = update.effective_user
+    telegram_user = update.effective_user
+    user_id = telegram_user.id
 
+    # Retrieve conversation, or create if non-existent
     conversation = None
     with conversations.lock:
         logger.debug("Acquired conversations lock")
-        if user in conversations.all:
-            conversation = conversations.all[user.id]
+        if user_id in conversations.all:
+            conversation = conversations.all[user_id]
         else:
             logger.debug("Creating new conversation")
-            conversation = conversations.Conversation(user)
-            conversations.all[user.id] = conversation
+            conversation = conversations.Conversation(telegram_user)
+            conversations.all[user_id] = conversation
 
     with conversation.lock:
         if conversation.is_idle():

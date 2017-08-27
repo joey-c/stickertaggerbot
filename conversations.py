@@ -33,6 +33,9 @@ class Conversation(object):
     def is_idle(self):
         return self.state == Conversation.State.IDLE
 
+    def reset_state(self):
+        self.state = Conversation.State.IDLE
+        self._future = None
 
     def __change_state(self, new_state, future):
         self.state = new_state

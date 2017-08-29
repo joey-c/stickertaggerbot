@@ -23,6 +23,11 @@ def patch_database():
                                                         return_value=None)
 
 
+def run_handler(handler_creator, update):
+    handler = handler_creator(app_for_testing)
+    handler.__wrapped__(bot, update)  # run without async
+
+
 class TestStartCommandHandler(object):
     def test_new_user(self):
         patch_telegram()
@@ -36,8 +41,7 @@ class TestStartCommandHandler(object):
         user_id = update.effective_user.id
         chat_id = update.effective_chat.id
 
-        handler = handlers.create_command_start_handler(app_for_testing)
-        handler.__wrapped__(bot, update)  # run without async
+        run_handler(handlers.create_command_start_handler, update)
 
         handlers.models.User.get.assert_called_once_with(user_id)
         handlers.models.User.add_to_database.assert_called_once_with()

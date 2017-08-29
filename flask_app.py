@@ -27,7 +27,7 @@ class Application(flask.Flask):
         self.bot = telegram.Bot(token=tokens.TELEGRAM)
         self.update_queue = queue.Queue()
         self.dispatcher = telegram.ext.Dispatcher(self.bot, self.update_queue)
-        handlers.register_handlers(self.dispatcher)
+        handlers.register_handlers(self.dispatcher, self)
         self.dispatcher_thread = threading.Thread(target=self.dispatcher.start,
                                                   name="dispatcher")
         self.dispatcher_thread.start()

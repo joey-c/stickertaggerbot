@@ -11,7 +11,7 @@ import models
 
 
 class Application(flask.Flask):
-    def __init__(self):
+    def __init__(self, testing=False):
         super().__init__(__name__)
         self.debug = True
         self.bot = None
@@ -20,6 +20,7 @@ class Application(flask.Flask):
         self.dispatcher_thread = None
         self.setup_telegram()
         self.database = None
+        self.testing = testing
         self.setup_database()
 
     def setup_telegram(self):

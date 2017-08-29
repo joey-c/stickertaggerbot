@@ -1,3 +1,5 @@
+import datetime
+
 import factory
 import telegram
 
@@ -47,7 +49,7 @@ class MessageFactory(factory.Factory):
     # Required arguments
     message_id = factory.Sequence(lambda n: n)
     from_user = factory.SubFactory(UserFactory)
-    date = None
+    date = datetime.datetime.now()
     chat = factory.SubFactory(
         ChatFactory,
         username=factory.LazyAttribute(
@@ -86,9 +88,9 @@ class StickerFactory(factory.Factory):
         model = telegram.Sticker
 
     # Required arguments
-    file_id = None
-    width = None
-    height = None
+    file_id = "sticker_file_id"
+    width = 150
+    height = 150
 
     # Optional arguments
     set_name = None

@@ -32,12 +32,19 @@ class Message(object):
 def create_command_start_handler(app):
     @run_async
     def command_start_handler(bot, update):
-        user = models.User.get(update.effective_user.id)
+        logger = logging.getLogger("handler.start")
+        logger.debug("Handling start")
 
-        if not user:
-            chat_id = update.effective_chat.id
-        user = models.User.from_telegram_user(update.effective_user, chat_id)
-        models.database.session.commit()
+        with app.app_context():
+            user = models.User.get(update.effective_user.id)
+            if not user:
+                chat_id = update.effective_chat.id
+                user = models.User.from_telegram_user(update.effective_user,
+                                                      chat_id)
+            models.database.session.commit()
+            bot.send_message(user.chat_id, Message.Instruction.START.value)
+
+        logger.debug("Sent instructions")
 
     return command_start_handler
 

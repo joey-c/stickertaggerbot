@@ -11,7 +11,7 @@ import models
 
 
 class Application(flask.Flask):
-    def __init__(self):
+    def __init__(self, testing=False):
         super().__init__(__name__)
         self.debug = True
         self.bot = None
@@ -20,13 +20,14 @@ class Application(flask.Flask):
         self.dispatcher_thread = None
         self.setup_telegram()
         self.database = None
+        self.testing = testing
         self.setup_database()
 
     def setup_telegram(self):
         self.bot = telegram.Bot(token=tokens.TELEGRAM)
         self.update_queue = queue.Queue()
         self.dispatcher = telegram.ext.Dispatcher(self.bot, self.update_queue)
-        handlers.register_handlers(self.dispatcher)
+        handlers.register_handlers(self.dispatcher, self)
         self.dispatcher_thread = threading.Thread(target=self.dispatcher.start,
                                                   name="dispatcher")
         self.dispatcher_thread.start()

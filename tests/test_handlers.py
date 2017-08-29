@@ -23,20 +23,21 @@ def patch_database():
                                                         return_value=None)
 
 
-class TestStartCommand(object):
+class TestStartCommandHandler(object):
     def test_new_user(self):
         patch_telegram()
         patch_database()
 
-        handlers.models.User.get = mock.Mock(autospec=True, return_value=None)
+        handlers.models.User.get = mock.Mock(autospec=True,
+                                             return_value=None)
 
         update = telegram_factories.CommandUpdateFactory(
             message__command="start")
         user_id = update.effective_user.id
         chat_id = update.effective_chat.id
 
-        with app_for_testing.app_context():
-            handlers.command_start_handler(bot, update)
+        handler = handlers.create_command_start_handler(app_for_testing)
+        handler.__wrapped__(bot, update)  # run without async
 
         handlers.models.User.get.assert_called_once_with(user_id)
         handlers.models.User.add_to_database.assert_called_once_with()

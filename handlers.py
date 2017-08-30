@@ -8,7 +8,7 @@ from telegram.ext.dispatcher import run_async
 import conversations
 import models
 
-pool = concurrent.futures.ThreadPoolExecutor
+pool = concurrent.futures.ThreadPoolExecutor()
 
 
 class Message(object):

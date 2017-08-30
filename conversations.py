@@ -35,11 +35,14 @@ class Conversation(object):
 
     def reset_state(self):
         self.state = Conversation.State.IDLE
+        if self._future:
+            self._future.cancel()
         self._future = None
 
     def __change_state(self, new_state, future):
         self.state = new_state
-        self._future.cancel()
+        if self._future:
+            self._future.cancel()
         self._future = future
 
     def change_state(self, new_state, future=None, force=False):

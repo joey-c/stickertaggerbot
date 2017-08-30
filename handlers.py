@@ -49,10 +49,11 @@ def create_command_start_handler(app):
     return command_start_handler
 
 
-def sticker_is_new(user, sticker):
-    subquery = models.Association.query.filter_by(user_id=user.id,
-                                                  sticker_id=sticker.id)
-    count = subquery.count()
+def sticker_is_new(app, user, sticker):
+    with app.app_context():
+        subquery = models.Association.query.filter_by(
+            user_id=user.id, sticker_id=sticker.file_id)
+        count = subquery.count()
     return count == 0
 
 
@@ -72,7 +73,7 @@ def create_sticker_handler(app):
             if conversation.is_idle():
                 conversation.change_state(
                     conversations.Conversation.State.STICKER,
-                    pool.submit(sticker_is_new, user, sticker))
+                    pool.submit(sticker_is_new, app, user, sticker))
             else:
                 logger.debug("Conversation is not idle")
                 bot.send_message(Message.Error.RESTART)

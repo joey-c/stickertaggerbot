@@ -67,6 +67,7 @@ def create_sticker_handler(app):
 
         user = update.effective_user
         sticker = update.effective_message.sticker
+        chat_id = update.effective_chat.id
 
         conversation = conversations.get_or_create(user)
         with conversation.lock:
@@ -76,19 +77,19 @@ def create_sticker_handler(app):
                     pool.submit(sticker_is_new, app, user, sticker))
             else:
                 logger.debug("Conversation is not idle")
-                bot.send_message(Message.Error.RESTART)
+                bot.send_message(Message.Error.RESTART.value)
 
         new_sticker = conversation.get_future_result()
 
         if new_sticker:
-            bot.send_message(user.chat_id, Message.Instruction.LABEL)
+            bot.send_message(chat_id, Message.Instruction.LABEL.value)
         elif new_sticker is False:
             logger.debug("Sticker exists")
-            bot.send_message(user.chat_id, Message.Error.STICKER_EXISTS)
+            bot.send_message(chat_id, Message.Error.STICKER_EXISTS.value)
             # TODO Ask user if they meant to change the sticker's labels
         else:
             logger.debug("Future timed out")
-            bot.send_message(user.chat_id, Message.Error.UNKNOWN)
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
 
     return sticker_handler
 
@@ -101,7 +102,7 @@ def create_labels_handler(app):
         conversation = conversations.get_or_create(user, get_only=True)
 
         if not conversation:
-            bot.send_message(user.chat_id, Message.Error.NOT_STARTED)
+            bot.send_message(user.chat_id, Message.Error.NOT_STARTED.value)
             return
 
         with conversation.lock:
@@ -125,7 +126,7 @@ def create_confirmation_handler(app):
         conversation = conversations.get_or_create(user, get_only=True)
 
         if not conversation:
-            bot.send_message(user.chat_id, Message.Error.NOT_STARTED)
+            bot.send_message(user.chat_id, Message.Error.NOT_STARTED.value)
             return
 
         text = update.effective_message.text.lower()
@@ -136,7 +137,7 @@ def create_confirmation_handler(app):
                     conversations.Conversation.State.LABEL,
                     pool.submit(add_sticker, bot, update, conversation))
         else:
-            bot.send_message(user.chat_id, Message.Instruction.RE_LABEL)
+            bot.send_message(user.chat_id, Message.Instruction.RE_LABEL.value)
 
     return confirmation_handler
 
@@ -146,7 +147,7 @@ def add_sticker(bot, update, conversation):
 
     # TODO Add sticker
 
-    bot.send_message(user.chat_id, Message.Other.SUCCESS)
+    bot.send_message(user.chat_id, Message.Other.SUCCESS.value)
 
     # TODO Change conversation state to IDLE
 

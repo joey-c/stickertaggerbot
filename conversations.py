@@ -35,12 +35,33 @@ class Conversation(object):
 
     def reset_state(self):
         self.state = Conversation.State.IDLE
+        if self._future:
+            self._future.cancel()
         self._future = None
 
     def __change_state(self, new_state, future):
         self.state = new_state
-        self._future.cancel()
+        if self._future:
+            self._future.cancel()
         self._future = future
+
+    # Change state to typical previous state, unless otherwise specified
+    # If specifying future, state must also be specified
+    def rollback_state(self, state=None, future=None):
+        if future and not state:
+            raise ValueError
+
+        if state:
+            self.state = state
+
+        if future:
+            self._future = future
+
+        if state is None and future is None:
+            if self._future:
+                self._future.cancel()
+            if self.state != Conversation.State.IDLE:
+                self.state = Conversation.State(self.state.value - 1)
 
     def change_state(self, new_state, future=None, force=False):
         if force:
@@ -52,19 +73,24 @@ class Conversation(object):
                 pass
 
         # Enforce state transition order
-        if new_state == Conversation.State.STICKER:
-            assert self.state == Conversation.State.IDLE
-        elif new_state == Conversation.State.LABEL:
-            assert (self.state == Conversation.State.STICKER or
-                    self.state == Conversation.State.LABEL)
-        elif new_state == Conversation.State.CONFIRMED:
-            assert self.state == Conversation.State.LABEL
+        try:
+            if new_state == Conversation.State.STICKER:
+                assert self.state == Conversation.State.IDLE
+            elif new_state == Conversation.State.LABEL:
+                assert (self.state == Conversation.State.STICKER or
+                        self.state == Conversation.State.LABEL)
+            elif new_state == Conversation.State.CONFIRMED:
+                assert self.state == Conversation.State.LABEL
+        except AssertionError:
+            return False
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
                      " to " + str(new_state))
 
         self.__change_state(new_state, future)
+
+        return True
 
     # timeout in seconds
     def get_future_result(self, timeout=3):

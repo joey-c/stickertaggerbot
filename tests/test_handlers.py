@@ -67,3 +67,66 @@ class TestStartCommandHandler(object):
         bot.send_message.assert_called_once_with(
             chat_id,
             handlers.Message.Instruction.START.value)
+
+
+class TestStickerHandler(object):
+    @pytest.fixture
+    def update(self):
+        return telegram_factories.StickerUpdateFactory()
+
+    def test_new_sticker(self, update):
+        patch_telegram()
+
+        conversation = mock_conversation()
+        handlers.sticker_is_new = mock.Mock(autospec=True, return_value=True)
+
+        run_handler(handlers.create_sticker_handler, update)
+
+        conversation.change_state.assert_called_once()
+        assert conversation.rollback_state.call_args == None
+        bot.send_message.assert_called_once_with(
+            update.effective_chat.id,
+            handlers.Message.Instruction.LABEL.value)
+
+    def test_interrupted_conversation(self, update):
+        patch_telegram()
+
+        conversation = mock_conversation()
+        conversation.is_idle = mock.Mock(autospec=True, return_value=False)
+
+        run_handler(handlers.create_sticker_handler, update)
+
+        assert conversation.change_state.call_args == None
+        assert conversation.rollback_state.call_args == None
+        bot.send_message.assert_called_once_with(
+            update.effective_chat.id,
+            handlers.Message.Error.RESTART.value)
+
+    def test_sticker_exists(self, update):
+        patch_telegram()
+
+        conversation = mock_conversation()
+        conversation.get_future_result = mock.Mock(return_value=False)
+
+        run_handler(handlers.create_sticker_handler, update)
+
+        conversation.change_state.assert_called_once()
+        conversation.rollback_state.assert_called_once()
+        bot.send_message.assert_called_once_with(
+            update.effective_chat.id,
+            handlers.Message.Error.STICKER_EXISTS.value)
+
+    def test_future_timed_out(self, update):
+        patch_telegram()
+
+        conversation = mock_conversation()
+        conversation.get_future_result = mock.Mock(autospec=True,
+                                                   return_value=None)
+
+        run_handler(handlers.create_sticker_handler, update)
+
+        conversation.change_state.assert_called_once()
+        conversation.rollback_state.assert_called_once()
+        bot.send_message.assert_called_once_with(
+            update.effective_chat.id,
+            handlers.Message.Error.UNKNOWN.value)

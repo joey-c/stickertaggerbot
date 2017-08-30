@@ -117,5 +117,9 @@ class MessageUpdateFactory(UpdateFactory):
     message = factory.SubFactory(MessageFactory)
 
 
+class StickerUpdateFactory(UpdateFactory):
+    message = factory.SubFactory(StickerMessageFactory)
+
+
 class CommandUpdateFactory(UpdateFactory):
     message = factory.SubFactory(CommandMessageFactory)

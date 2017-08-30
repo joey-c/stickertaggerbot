@@ -1,3 +1,5 @@
+import threading
+import pytest
 from unittest import mock
 
 import handlers
@@ -21,6 +23,22 @@ def patch_database():
                                                      return_value=None)
     handlers.models.database.session.commit = mock.Mock(autospec=True,
                                                         return_value=None)
+
+
+# Returns a new mock Conversation object
+# Use instead of directly mocking a Conversation
+# because conversation.lock doesn't get mocked properly
+def mock_conversation():
+    real_instance = handlers.conversations.Conversation(
+        telegram_factories.UserFactory())
+    real_lock = threading.Lock()
+
+    mock_instance = mock.Mock(spec=real_instance)
+    mock_instance.lock = real_lock
+
+    handlers.conversations.Conversation = mock.Mock(autospec=True,
+                                                    return_value=mock_instance)
+    return mock_instance
 
 
 def run_handler(handler_creator, update):

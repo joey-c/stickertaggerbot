@@ -45,6 +45,24 @@ class Conversation(object):
             self._future.cancel()
         self._future = future
 
+    # Change state to typical previous state, unless otherwise specified
+    # If specifying future, state must also be specified
+    def rollback_state(self, state=None, future=None):
+        if future and not state:
+            raise ValueError()
+
+        if state:
+            self.state = state
+
+        if future:
+            self._future = future
+
+        if state is None and future is None:
+            if self._future:
+                self._future.cancel()
+            if self.state != Conversation.State.IDLE:
+                self.state = Conversation.State(self.state.value - 1)
+
     def change_state(self, new_state, future=None, force=False):
         if force:
             self.__change_state(new_state, future)

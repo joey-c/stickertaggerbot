@@ -70,14 +70,19 @@ def create_sticker_handler(app):
         chat_id = update.effective_chat.id
 
         conversation = conversations.get_or_create(user)
+
         with conversation.lock:
+            changed = False
             if conversation.is_idle():
-                conversation.change_state(
+                changed = conversation.change_state(
                     conversations.Conversation.State.STICKER,
                     pool.submit(sticker_is_new, app, user, sticker))
-            else:
+
+            if not changed:
+                # TODO Ask user if they want to cancel previous conversation
                 logger.debug("Conversation is not idle")
-                bot.send_message(Message.Error.RESTART.value)
+                bot.send_message(chat_id, Message.Error.RESTART.value)
+                return
 
         new_sticker = conversation.get_future_result()
 
@@ -87,9 +92,11 @@ def create_sticker_handler(app):
             logger.debug("Sticker exists")
             bot.send_message(chat_id, Message.Error.STICKER_EXISTS.value)
             # TODO Ask user if they meant to change the sticker's labels
+            conversation.rollback_state()
         else:
             logger.debug("Future timed out")
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            conversation.rollback_state()
 
     return sticker_handler
 

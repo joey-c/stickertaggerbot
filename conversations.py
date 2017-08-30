@@ -55,19 +55,24 @@ class Conversation(object):
                 pass
 
         # Enforce state transition order
-        if new_state == Conversation.State.STICKER:
-            assert self.state == Conversation.State.IDLE
-        elif new_state == Conversation.State.LABEL:
-            assert (self.state == Conversation.State.STICKER or
-                    self.state == Conversation.State.LABEL)
-        elif new_state == Conversation.State.CONFIRMED:
-            assert self.state == Conversation.State.LABEL
+        try:
+            if new_state == Conversation.State.STICKER:
+                assert self.state == Conversation.State.IDLE
+            elif new_state == Conversation.State.LABEL:
+                assert (self.state == Conversation.State.STICKER or
+                        self.state == Conversation.State.LABEL)
+            elif new_state == Conversation.State.CONFIRMED:
+                assert self.state == Conversation.State.LABEL
+        except AssertionError:
+            return False
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
                      " to " + str(new_state))
 
         self.__change_state(new_state, future)
+
+        return True
 
     # timeout in seconds
     def get_future_result(self, timeout=3):

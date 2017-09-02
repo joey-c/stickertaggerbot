@@ -24,11 +24,19 @@ class Conversation(object):
         self.lock = threading.Lock()
         self._future = None
 
-    def state_complete(self, state):
-        if not self._future:
+    # Returns True if state is None and self.state is IDLE
+    #                 state is None and future is done
+    #                 state is None and there is no future
+    #                 state matches and future is done
+    #                 state matches and there is no future
+    def state_complete(self, state=None):
+        if state and self.state != state:
             return False
 
-        return self.state == state and self._future.done()
+        if self._future:
+            return self._future.done()
+
+        return True
 
     def is_idle(self):
         return self.state == Conversation.State.IDLE

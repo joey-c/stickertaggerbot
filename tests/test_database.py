@@ -14,17 +14,17 @@ class TestInsertion(object):
             label = models.Label("label")
             association = models.Association(user, sticker, label)
 
-            assert (models.User.id_exists(user_id))
-            assert (models.User.count() == 1)
+            assert models.User.id_exists(user_id)
+            assert models.User.count() == 1
 
-            assert (models.Sticker.id_exists(sticker_id))
-            assert (models.Sticker.count() == 1)
+            assert models.Sticker.id_exists(sticker_id)
+            assert models.Sticker.count() == 1
 
-            assert (models.Label.id_exists(1))
-            assert (models.Label.count() == 1)
+            assert models.Label.id_exists(1)
+            assert models.Label.count() == 1
 
-            assert (models.Association.id_exists(1))
-            assert (models.Association.count() == 1)
+            assert models.Association.id_exists(1)
+            assert models.Association.count() == 1
 
             clear_all_tables()
 
@@ -40,23 +40,23 @@ class TestInsertion(object):
             label_b = models.Label("label b")
             association_b = models.Association(user, sticker, label_b)
 
-            assert (models.User.id_exists(user_id))
-            assert (models.User.count() == 1)
+            assert models.User.id_exists(user_id)
+            assert models.User.count() == 1
 
-            assert (models.Sticker.id_exists(sticker_id))
-            assert (models.Sticker.count() == 1)
+            assert models.Sticker.id_exists(sticker_id)
+            assert models.Sticker.count() == 1
 
-            assert (models.Label.id_exists(1))
-            assert (models.Label.id_exists(2))
-            assert (models.Label.count() == 2)
+            assert models.Label.id_exists(1)
+            assert models.Label.id_exists(2)
+            assert models.Label.count() == 2
 
-            assert (models.Association.id_exists(1))
-            assert (models.Association.id_exists(2))
-            assert (models.Association.count() == 2)
+            assert models.Association.id_exists(1)
+            assert models.Association.id_exists(2)
+            assert models.Association.count() == 2
 
-            assert (models.Association.count("user_id", user_id) == 2)
-            assert (models.Association.count("sticker_id", sticker_id) == 2)
-            assert (models.Association.count("label_id") == 2)
+            assert models.Association.count("user_id", user_id) == 2
+            assert models.Association.count("sticker_id", sticker_id) == 2
+            assert models.Association.count("label_id") == 2
 
             clear_all_tables()
 
@@ -74,9 +74,9 @@ class TestInsertion(object):
             models.database.session.add(label)
             models.database.session.add(association_a)
 
-            assert (models.User.count() == 1)
-            assert (models.Sticker.count() == 1)
-            assert (models.Label.count() == 1)
-            assert (models.Association.count() == 1)
+            assert models.User.count() == 1
+            assert models.Sticker.count() == 1
+            assert models.Label.count() == 1
+            assert models.Association.count() == 1
 
             clear_all_tables()

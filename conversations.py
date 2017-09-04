@@ -75,6 +75,7 @@ class Conversation(object):
     def change_state(self, new_state, future=None, force=False):
         if force:
             self.__change_state(new_state, future)
+            return
 
         # Block until previous state's action is complete
         elif self._future:

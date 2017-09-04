@@ -5,9 +5,7 @@ import flask
 import telegram
 import telegram.ext
 
-import tokens
-import handlers
-import models
+from Text2StickerBot import tokens, handlers, models
 
 
 class Application(flask.Flask):

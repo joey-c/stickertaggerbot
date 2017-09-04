@@ -5,8 +5,7 @@ from enum import Enum
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
-import conversations
-import models
+from Text2StickerBot import conversations, models
 
 pool = concurrent.futures.ThreadPoolExecutor()
 

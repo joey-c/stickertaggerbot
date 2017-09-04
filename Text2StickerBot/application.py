@@ -4,8 +4,7 @@ import os
 import flask
 import telegram
 
-import tokens
-import flask_app
+from Text2StickerBot import tokens, flask_app
 
 logging.basicConfig(filename=os.environ["LOG_LOCATION"],
                     level=logging.DEBUG,

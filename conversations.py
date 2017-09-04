@@ -24,6 +24,7 @@ class Conversation(object):
         self.state = Conversation.State.IDLE
         self.lock = threading.Lock()
         self.sticker = None
+        self.labels = None
         self._future = None
 
     # Returns True if state is None and self.state is IDLE

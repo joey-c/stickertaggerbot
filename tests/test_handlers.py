@@ -1,13 +1,15 @@
-import threading
+import telegram
 import pytest
 from unittest import mock
 
 import handlers
+import conversations
 
 from tests import telegram_factories
 from tests.misc import app_for_testing
 
 bot = app_for_testing.bot
+States = conversations.Conversation.State
 
 
 def patch_database():
@@ -114,3 +116,90 @@ class TestStickerHandler(object):
         bot.send_message.assert_called_once_with(
             update.effective_chat.id,
             handlers.Message.Error.UNKNOWN.value)
+
+
+class TestLabelsHandler(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        bot.send_message = mock.Mock()
+        bot.send_sticker = mock.Mock()
+
+    def test_no_conversation(self):
+        handlers.conversations.get_or_create = mock.Mock(autospec=True,
+                                                         return_value=None)
+
+        update = telegram_factories.MessageUpdateFactory(
+            message__text="message")
+        chat_id = update.effective_chat.id
+
+        run_handler(handlers.create_labels_handler, update)
+
+        bot.send_message.assert_called_once_with(
+            chat_id,
+            handlers.Message.Error.NOT_STARTED.value)
+
+    def test_interrupted_conversation(self, conversation):
+        conversation.change_state = mock.Mock(
+            autospec=True, return_value=False)
+        update = telegram_factories.MessageUpdateFactory(
+            message__from_user=conversation.user)
+        chat_id = update.effective_chat.id
+        handlers.conversations.get_or_create = mock.Mock(
+            autospec=True, return_value=conversation)
+
+        run_handler(handlers.create_labels_handler, update)
+
+        bot.send_message.assert_called_once_with(
+            chat_id, handlers.Message.Error.RESTART.value)
+
+    def test_empty_labels(self):
+        update = telegram_factories.MessageUpdateFactory(message__text="")
+        chat_id = update.effective_chat.id
+        run_handler(handlers.create_labels_handler, update)
+
+        bot.send_message.assert_called_once_with(
+            chat_id,
+            handlers.Message.Error.LABEL_MISSING.value)
+
+    def test_one_label(self, conversation):
+        label = "label"
+
+        sticker = telegram_factories.StickerFactory()
+        conversation.sticker = sticker
+
+        user = telegram_factories.UserFactory()
+        conversation.user = user
+
+        handlers.conversations.get_or_create = mock.Mock(
+            autospec=True, return_value=conversation)
+        handlers.conversations.Conversation.State.LABEL = States.LABEL
+        update = telegram_factories.MessageUpdateFactory(
+            message__text=label,
+            message__from_user=user)
+        chat_id = update.effective_chat.id
+
+        run_handler(handlers.create_labels_handler, update)
+
+        bot.send_sticker.assert_called_once_with(chat_id, sticker)
+        bot.send_message.assert_called_once()
+
+    # TODO Distinguish test from test_one_label
+    def test_multiple_labels(self, conversation):
+        sticker = telegram_factories.StickerFactory()
+        conversation.sticker = sticker
+
+        user = telegram_factories.UserFactory()
+        conversation.user = user
+
+        handlers.conversations.get_or_create = mock.Mock(
+            autospec=True, return_value=conversation)
+        handlers.conversations.Conversation.State.LABEL = States.LABEL
+
+        update = telegram_factories.MessageUpdateFactory(
+            message__text="label1 label2 label3")
+        chat_id = update.effective_chat.id
+
+        run_handler(handlers.create_labels_handler, update)
+
+        bot.send_sticker.assert_called_once_with(chat_id, sticker)
+        bot.send_message.assert_called_once()

@@ -1,5 +1,7 @@
+import time
 import concurrent.futures
 import pytest
+from unittest import mock
 
 import conversations
 from tests import telegram_factories
@@ -27,6 +29,17 @@ def completed_future():
     future = concurrent.futures.Future()
     future.set_result(True)
     return future
+
+
+pool = concurrent.futures.ThreadPoolExecutor()
+
+
+@pytest.fixture()
+def blocking_future():
+    def block():
+        time.sleep(3)
+
+    return pool.submit(block)
 
 
 @pytest.fixture()
@@ -113,38 +126,75 @@ class TestRollback(object):
         conversation.rollback_state()
         assert conversation.state == States.IDLE
 
+    def test_error(self, conversation, completed_future):
+        with pytest.raises(ValueError) as error:
+            conversation.rollback_state(future=completed_future)
+
 
 class TestChangeState(object):
     def test_force(self, conversation):
-        pass
+        conversation.change_state(States.STICKER, force=True)
 
-    def test_blocked(self, conversation):
-        pass
+        assert conversation.state == States.STICKER
+
+    def test_force_with_blocking_future(self, conversation, blocking_future):
+        blocking_future.cancel = mock.Mock()
+        conversation.state = States.STICKER
+        conversation._future = blocking_future
+
+        conversation.change_state(States.LABEL, force=True)
+
+        blocking_future.cancel.assert_called_once()
+        assert conversation.state == States.LABEL
+        assert conversation._future is None
+
+    def test_blocked(self, conversation, blocking_future):
+        blocking_future.cancel = mock.Mock()
+        conversation._future = blocking_future
+        conversation.change_state(States.STICKER)
+
+        blocking_future.cancel.assert_called_once()
+        assert conversation.state == States.STICKER
+        assert conversation._future is None
 
     def test_wrong_transition_order(self, conversation):
-        pass
+        with pytest.raises(ValueError):
+            conversation.change_state(States.LABEL)
 
-    def test_normal(self, conversation):
-        pass
+    def test_normal(self, conversation, incomplete_future):
+        conversation.change_state(States.STICKER, future=incomplete_future)
 
-    def test_idle(self, conversation):
-        pass
+        assert conversation.state == States.STICKER
+        assert conversation._future == incomplete_future
 
 
 class TestGetFutureResult(object):
     def test_incomplete_future(self, conversation, incomplete_future):
-        pass
+        conversation._future = incomplete_future
+
+        assert conversation.get_future_result() is None
 
     def test_no_future(self, conversation):
-        pass
+        with pytest.raises(ValueError):
+            conversation.get_future_result()
 
     def test_completed_future(self, conversation, completed_future):
-        pass
+        conversation._future = completed_future
+
+        assert conversation.get_future_result()
 
 
 class TestGetOrCreate(object):
-    def test_get(self, conversation):
-        pass
+    def test_get(self, user):
+        conversation = conversations.Conversation(user)
+        conversations.all[user.id] = conversation
 
-    def test_create(self):
-        pass
+        retrieved_conversation = conversations.get_or_create(user)
+        assert retrieved_conversation == conversation
+
+    def test_create(self, user):
+        original_size = len(conversations.all)
+        conversation = conversations.get_or_create(user)
+        current_size = len(conversations.all)
+
+        assert current_size == original_size + 1

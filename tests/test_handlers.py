@@ -10,11 +10,6 @@ from tests.misc import app_for_testing
 bot = app_for_testing.bot
 
 
-@pytest.fixture(autouse=True)
-def patch_telegram():
-    bot.send_message = mock.Mock()
-
-
 def patch_database():
     handlers.models.User.add_to_database = mock.Mock(autospec=True,
                                                      return_value=None)
@@ -45,6 +40,10 @@ def run_handler(handler_creator, update):
 
 
 class TestStartCommandHandler(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        bot.send_message = mock.Mock()
+
     def test_new_user(self):
         patch_database()
 
@@ -67,6 +66,10 @@ class TestStartCommandHandler(object):
 
 
 class TestStickerHandler(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        bot.send_message = mock.Mock()
+
     @pytest.fixture
     def update(self):
         return telegram_factories.StickerUpdateFactory()

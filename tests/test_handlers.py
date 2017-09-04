@@ -25,7 +25,8 @@ def patch_database():
 # Returns a new mock Conversation object
 # Use instead of directly mocking a Conversation
 # because conversation.lock doesn't get mocked properly
-def mock_conversation():
+@pytest.fixture()
+def conversation():
     real_instance = handlers.conversations.Conversation(
         telegram_factories.UserFactory())
     real_lock = threading.Lock()
@@ -70,8 +71,7 @@ class TestStickerHandler(object):
     def update(self):
         return telegram_factories.StickerUpdateFactory()
 
-    def test_new_sticker(self, update):
-        conversation = mock_conversation()
+    def test_new_sticker(self, update, conversation):
         handlers.sticker_is_new = mock.Mock(autospec=True, return_value=True)
 
         run_handler(handlers.create_sticker_handler, update)
@@ -84,8 +84,7 @@ class TestStickerHandler(object):
             update.effective_chat.id,
             handlers.Message.Instruction.LABEL.value)
 
-    def test_interrupted_conversation(self, update):
-        conversation = mock_conversation()
+    def test_interrupted_conversation(self, update, conversation):
         conversation.is_idle = mock.Mock(autospec=True, return_value=False)
 
         run_handler(handlers.create_sticker_handler, update)
@@ -96,8 +95,7 @@ class TestStickerHandler(object):
             update.effective_chat.id,
             handlers.Message.Error.RESTART.value)
 
-    def test_sticker_exists(self, update):
-        conversation = mock_conversation()
+    def test_sticker_exists(self, update, conversation):
         conversation.get_future_result = mock.Mock(return_value=False)
 
         run_handler(handlers.create_sticker_handler, update)
@@ -108,8 +106,7 @@ class TestStickerHandler(object):
             update.effective_chat.id,
             handlers.Message.Error.STICKER_EXISTS.value)
 
-    def test_future_timed_out(self, update):
-        conversation = mock_conversation()
+    def test_future_timed_out(self, update, conversation):
         conversation.get_future_result = mock.Mock(autospec=True,
                                                    return_value=None)
 

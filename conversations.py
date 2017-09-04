@@ -1,6 +1,7 @@
 import logging
 import threading
 import enum
+import concurrent.futures
 
 all = {}
 lock = threading.Lock()
@@ -22,6 +23,7 @@ class Conversation(object):
         self.user = user
         self.state = Conversation.State.IDLE
         self.lock = threading.Lock()
+        self.sticker = None
         self._future = None
 
     # Returns True if state is None and self.state is IDLE
@@ -74,6 +76,7 @@ class Conversation(object):
     def change_state(self, new_state, future=None, force=False):
         if force:
             self.__change_state(new_state, future)
+            return
 
         # Block until previous state's action is complete
         elif self._future:
@@ -90,7 +93,8 @@ class Conversation(object):
             elif new_state == Conversation.State.CONFIRMED:
                 assert self.state == Conversation.State.LABEL
         except AssertionError:
-            return False
+            raise ValueError("Cannot transit to " + new_state.name +
+                             " from " + self.state.name)
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
@@ -106,7 +110,7 @@ class Conversation(object):
             raise ValueError("Conversation has no future.")
         try:
             return self._future.result(timeout=timeout)
-        except TimeoutError:
+        except concurrent.futures.TimeoutError:
             return None
 
 

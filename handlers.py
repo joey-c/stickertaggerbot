@@ -88,6 +88,8 @@ def create_sticker_handler(app):
 
         if new_sticker:
             bot.send_message(chat_id, Message.Instruction.LABEL.value)
+            with conversation.lock:
+                conversation.sticker = sticker
         elif new_sticker is False:
             logger.debug("Sticker exists")
             bot.send_message(chat_id, Message.Error.STICKER_EXISTS.value)

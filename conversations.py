@@ -1,6 +1,7 @@
 import logging
 import threading
 import enum
+import concurrent.futures
 
 all = {}
 lock = threading.Lock()
@@ -106,7 +107,7 @@ class Conversation(object):
             raise ValueError("Conversation has no future.")
         try:
             return self._future.result(timeout=timeout)
-        except TimeoutError:
+        except concurrent.futures.TimeoutError:
             return None
 
 

@@ -102,6 +102,8 @@ class Conversation(object):
 
     # timeout in seconds
     def get_future_result(self, timeout=3):
+        if not self._future:
+            raise ValueError("Conversation has no future.")
         try:
             return self._future.result(timeout=timeout)
         except TimeoutError:

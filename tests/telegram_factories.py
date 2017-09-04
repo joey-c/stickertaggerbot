@@ -88,7 +88,7 @@ class StickerFactory(factory.Factory):
         model = telegram.Sticker
 
     # Required arguments
-    file_id = "sticker_file_id"
+    file_id = factory.Sequence(lambda n: "sticker_" + str(n))
     width = 150
     height = 150
 

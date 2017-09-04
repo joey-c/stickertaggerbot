@@ -92,7 +92,8 @@ class Conversation(object):
             elif new_state == Conversation.State.CONFIRMED:
                 assert self.state == Conversation.State.LABEL
         except AssertionError:
-            return False
+            raise ValueError("Cannot transit to " + new_state.name +
+                             " from " + self.state.name)
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +

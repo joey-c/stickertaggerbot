@@ -10,12 +10,9 @@ from tests.misc import app_for_testing
 bot = app_for_testing.bot
 
 
+@pytest.fixture(autouse=True)
 def patch_telegram():
-    def return_update(chat_id, text):
-        return telegram_factories.MessageFactory(text=text,
-                                                 chat__id=chat_id)
-
-    bot.send_message = mock.Mock(side_effect=return_update)
+    bot.send_message = mock.Mock()
 
 
 def patch_database():
@@ -48,7 +45,6 @@ def run_handler(handler_creator, update):
 
 class TestStartCommandHandler(object):
     def test_new_user(self):
-        patch_telegram()
         patch_database()
 
         handlers.models.User.get = mock.Mock(autospec=True,
@@ -75,8 +71,6 @@ class TestStickerHandler(object):
         return telegram_factories.StickerUpdateFactory()
 
     def test_new_sticker(self, update):
-        patch_telegram()
-
         conversation = mock_conversation()
         handlers.sticker_is_new = mock.Mock(autospec=True, return_value=True)
 
@@ -85,14 +79,12 @@ class TestStickerHandler(object):
         assert conversation.sticker == update.effective_message.sticker
         conversation.change_state.assert_called_once()
         assert conversation.rollback_state.call_args == None
-        
+
         bot.send_message.assert_called_once_with(
             update.effective_chat.id,
             handlers.Message.Instruction.LABEL.value)
 
     def test_interrupted_conversation(self, update):
-        patch_telegram()
-
         conversation = mock_conversation()
         conversation.is_idle = mock.Mock(autospec=True, return_value=False)
 
@@ -105,8 +97,6 @@ class TestStickerHandler(object):
             handlers.Message.Error.RESTART.value)
 
     def test_sticker_exists(self, update):
-        patch_telegram()
-
         conversation = mock_conversation()
         conversation.get_future_result = mock.Mock(return_value=False)
 
@@ -119,8 +109,6 @@ class TestStickerHandler(object):
             handlers.Message.Error.STICKER_EXISTS.value)
 
     def test_future_timed_out(self, update):
-        patch_telegram()
-
         conversation = mock_conversation()
         conversation.get_future_result = mock.Mock(autospec=True,
                                                    return_value=None)

@@ -190,6 +190,13 @@ def generate_inline_keyboard_markup(callback_data_generator, button_texts):
     return telegram.InlineKeyboardMarkup(buttons)
 
 
+def create_callback_handler(app):
+    def callback_handler(bot, update):
+        pass
+
+    return callback_handler
+
+
 def create_confirmation_handler(app):
     @run_async
     def confirmation_handler(bot, update):
@@ -245,6 +252,10 @@ def register_handlers(dispatcher, app):
     dispatcher.add_handler(
         telegram.ext.MessageHandler(telegram.ext.Filters.text,
                                     create_labels_handler(app)))
+
+    dispatcher.add_handler(
+        telegram.ext.CallbackQueryHandler(create_callback_handler(app))
+    )
 
     dispatcher.add_handler(
         telegram.ext.MessageHandler(telegram.ext.Filters.text,

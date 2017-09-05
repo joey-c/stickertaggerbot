@@ -149,6 +149,11 @@ class Label(database.Model, ModelMixin):
         elif query.count() == 1:
             return query.first()
 
+    @classmethod
+    def exists(cls, text):
+        query = cls.query.filter_by(text=text)
+        return query.count() > 0
+
 
 class Association(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
@@ -182,3 +187,10 @@ class Association(database.Model, ModelMixin):
         return "User: " + str(self.user_id) + \
                ", Sticker: " + str(self.sticker_id) + \
                ", Label: " + str(self.label_id)
+
+    @classmethod
+    def exists(cls, user, sticker, label):
+        query = cls.query.filter_by(user_id=user.id,
+                                    sticker_id=sticker.id,
+                                    label_id=label.id)
+        return query.count() > 0

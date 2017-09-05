@@ -112,9 +112,10 @@ def get_labels(update):
 def create_labels_handler(app):
     @run_async
     def labels_handler(bot, update):
+        # TODO Make callback_data class
         def callback_data_generator(button_text):
             state = conversations.Conversation.State.LABEL
-            bases = [str(user.id), state.name, sticker.file_id, button_text]
+            bases = [state.name, sticker.file_id, button_text]
             return "+".join(bases)
 
         logger = logging.getLogger("handler.labels")

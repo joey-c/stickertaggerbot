@@ -106,6 +106,18 @@ class Conversation(object):
 
         return True
 
+    def update_future(self, new_future, force=False):
+        if force:
+            if self._future:
+                self._future.cancel()
+            self._future = new_future
+
+        if not force:
+            if self._future:
+                while not self._future.done():
+                    pass
+            self._future = new_future
+
     # timeout in seconds
     def get_future_result(self, timeout=3):
         if not self._future:

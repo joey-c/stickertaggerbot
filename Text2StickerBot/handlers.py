@@ -196,30 +196,6 @@ def create_callback_handler(app):
     return callback_handler
 
 
-def create_confirmation_handler(app):
-    @run_async
-    def confirmation_handler(bot, update):
-        user = update.effective_user
-
-        conversation = conversations.get_or_create(user, get_only=True)
-
-        if not conversation:
-            bot.send_message(user.chat_id, Message.Error.NOT_STARTED.value)
-            return
-
-        text = update.effective_message.text.lower()
-        if text == "yes" or text == "y":
-            conversation = conversations.all[user.id]
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.LABEL,
-                    pool.submit(add_sticker, bot, update, conversation))
-        else:
-            bot.send_message(user.chat_id, Message.Instruction.RE_LABEL.value)
-
-    return confirmation_handler
-
-
 def add_sticker(bot, update, conversation):
     user = update.effective_user
 
@@ -253,12 +229,7 @@ def register_handlers(dispatcher, app):
                                     create_labels_handler(app)))
 
     dispatcher.add_handler(
-        telegram.ext.CallbackQueryHandler(create_callback_handler(app))
-    )
-
-    dispatcher.add_handler(
-        telegram.ext.MessageHandler(telegram.ext.Filters.text,
-                                    create_confirmation_handler(app)))
+        telegram.ext.CallbackQueryHandler(create_callback_handler(app)))
 
     dispatcher.add_handler(
         telegram.ext.InlineQueryHandler(create_inline_query_handler(app)))

@@ -137,6 +137,18 @@ class Label(database.Model, ModelMixin):
         return "ID: " + str(self.id) + \
                ", Text: " + str(self.text)
 
+    @classmethod
+    def get_or_create(cls, text, get_only=True):
+        query = cls.query.filter_by(text=text)
+
+        if query.count() == 0:
+            if not get_only:
+                return cls(text)
+            else:
+                return None
+        elif query.count() == 1:
+            return query.first()
+
 
 class Association(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)

@@ -98,7 +98,8 @@ def create_sticker_handler(app):
         sticker = update.effective_message.sticker
         chat_id = update.effective_chat.id
 
-        conversation = conversations.get_or_create(user)
+        conversation = conversations.get_or_create(user,
+                                                   chat=update.effective_chat)
 
         with conversation.lock:
             changed = False

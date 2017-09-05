@@ -19,8 +19,9 @@ class Conversation(object):
         LABEL = 2
         CONFIRMED = 3
 
-    def __init__(self, user):
+    def __init__(self, user, chat):
         self.user = user
+        self.chat = chat
         self.state = Conversation.State.IDLE
         self.lock = threading.Lock()
         self.sticker = None
@@ -115,9 +116,12 @@ class Conversation(object):
             return None
 
 
-def get_or_create(telegram_user, get_only=False):
+def get_or_create(telegram_user, get_only=False, chat=None):
     conversation = None
     user_id = telegram_user.id
+
+    if not (get_only or chat):
+        raise ValueError("Pass in chat or get_only=True")
 
     with lock:
         logger.debug("Acquired conversations lock")
@@ -126,7 +130,7 @@ def get_or_create(telegram_user, get_only=False):
             conversation = all[user_id]
         elif not get_only:
             logger.debug("Creating new conversation")
-            conversation = Conversation(telegram_user)
+            conversation = Conversation(telegram_user, chat)
             all[user_id] = conversation
 
     return conversation

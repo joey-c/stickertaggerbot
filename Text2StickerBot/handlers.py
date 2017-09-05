@@ -28,6 +28,35 @@ class Message(object):
         SUCCESS = ""
 
 
+class CallbackData(object):
+    class ButtonText(Enum):
+        CONFIRM = "confirm"
+        CANCEL = "cancel"
+
+    SEPARATOR = "+"
+
+    # Strings
+    def __init__(self, state, state_identifier, button_text=None):
+        self.state = state
+        self.state_identifier = state_identifier
+        self.button_text = button_text
+
+    def generator(self, button_text):
+        return CallbackData.SEPARATOR.join([button_text.value,
+                                            self.state.name,
+                                            self.state_identifier])
+
+    @classmethod
+    def unwrap(cls, callback_string):
+        button_text_value, state_name, state_identifier = callback_string.split(
+            cls.SEPARATOR)
+
+        state = getattr(conversations.Conversation.State, state_name)
+        button_text = CallbackData.ButtonText(button_text_value)
+
+        return cls(state, state_identifier, button_text)
+
+
 # Add user to database if user is new
 def create_command_start_handler(app):
     @run_async
@@ -112,12 +141,6 @@ def get_labels(update):
 def create_labels_handler(app):
     @run_async
     def labels_handler(bot, update):
-        # TODO Make callback_data class
-        def callback_data_generator(button_text):
-            state = conversations.Conversation.State.LABEL
-            bases = [state.name, sticker.file_id, button_text]
-            return "+".join(bases)
-
         logger = logging.getLogger("handler.labels")
         logger.debug("Handling labels")
 
@@ -158,8 +181,12 @@ def create_labels_handler(app):
 
         message_text = Message.Instruction.CONFIRM.value + message_labels
 
+        buttons = [[CallbackData.ButtonText.CONFIRM,
+                    CallbackData.ButtonText.CANCEL]]
+        generator = CallbackData(conversations.Conversation.State.LABEL,
+                                 sticker.file_id).generator
         inline_keyboard_markup = generate_inline_keyboard_markup(
-            callback_data_generator, [["confirm", "cancel"]])  # TODO Re-label
+            generator, buttons)  # TODO Add re-label
 
         bot.send_sticker(chat_id, sticker)
         bot.send_message(chat_id,

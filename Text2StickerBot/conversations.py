@@ -64,6 +64,10 @@ class Conversation(object):
             raise ValueError()
 
         if state:
+            if self.state == Conversation.State.STICKER:
+                self.sticker = None
+            elif self.state == Conversation.State.LABEL:
+                self.labels = None
             self.state = state
 
         if future:
@@ -72,6 +76,12 @@ class Conversation(object):
         if state is None and future is None:
             if self._future:
                 self._future.cancel()
+
+            if self.state == Conversation.State.STICKER:
+                self.sticker = None
+            elif self.state == Conversation.State.LABEL:
+                self.labels = None
+
             if self.state != Conversation.State.IDLE:
                 self.state = Conversation.State(self.state.value - 1)
 

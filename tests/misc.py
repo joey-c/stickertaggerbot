@@ -1,6 +1,6 @@
 from Text2StickerBot import flask_app, models
 
-app_for_testing = flask_app.Application()
+app_for_testing = flask_app.Application(testing=True)
 
 tables = [models.User,
           models.Sticker,

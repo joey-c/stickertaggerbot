@@ -23,7 +23,8 @@ def conversation():
     handlers.conversations.Conversation = mock.MagicMock(
         spec=handlers.conversations.Conversation)
     mock_conversation = handlers.conversations.Conversation(
-        telegram_factories.UserFactory())
+        telegram_factories.UserFactory(),
+        telegram_factories.ChatFactory())
 
     return mock_conversation
 

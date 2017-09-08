@@ -1,3 +1,6 @@
+import pytest
+from sqlite3 import IntegrityError
+
 from Text2StickerBot import models
 from tests.misc import clear_all_tables, app_for_testing
 
@@ -63,16 +66,30 @@ class TestInsertion(object):
     def test_duplicates(self):
         with app_for_testing.app_context():
             user_id = 123
-            sticker_id = 456
-            user = models.User(user_id, "username", "name")
-            sticker = models.Sticker(sticker_id)
-            label = models.Label("label")
-            association_a = models.Association(user, sticker, label)
+            username = "username"
+            name = "name"
+            user = models.User(user_id, username, name)
 
-            models.database.session.add(user)
-            models.database.session.add(sticker)
-            models.database.session.add(label)
-            models.database.session.add(association_a)
+            sticker_id = 456
+            sticker = models.Sticker(sticker_id)
+
+            label_text = "label"
+            label = models.Label(label_text)
+
+            association = models.Association(user, sticker, label)
+
+            with pytest.raises(IntegrityError):
+                user_duplicate = models.User(user_id, username, name)
+
+            with pytest.raises(IntegrityError):
+                sticker_duplicate = models.Sticker(sticker_id)
+
+            with pytest.raises(IntegrityError):
+                label_duplicate = models.Label("label")
+
+            with pytest.raises(IntegrityError):
+                association_duplicate = models.Association(user, sticker,
+                                                           label)
 
             assert models.User.count() == 1
             assert models.Sticker.count() == 1

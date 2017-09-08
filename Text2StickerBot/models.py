@@ -98,7 +98,7 @@ class User(database.Model, ModelMixin):
 
 
 class Sticker(database.Model, ModelMixin):
-    id = database.Column(database.Integer, primary_key=True)
+    id = database.Column(database.String(MAX_STRING_SIZE), primary_key=True)
 
     # Length derived from
     # http://python-telegram-bot.readthedocs.io/en/stable/telegram.bot.html#telegram.Bot.create_new_sticker_set

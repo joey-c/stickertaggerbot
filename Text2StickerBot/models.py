@@ -3,6 +3,7 @@ import logging
 import flask_sqlalchemy as fsa
 from sqlalchemy import literal
 from sqlalchemy.sql.functions import func
+from sqlite3 import IntegrityError  # TODO Use a different Error
 
 # NOTE: All Models flush the session upon creation
 
@@ -68,6 +69,9 @@ class User(database.Model, ModelMixin):
 
     def __init__(self, user_id, chat_id, first_name, last_name=None,
                  username=None, language=None):
+        if User.id_exists(user_id):
+            raise IntegrityError("User exists")
+
         self.id = user_id
         self.chat_id = chat_id
         self.first_name = first_name
@@ -101,6 +105,9 @@ class Sticker(database.Model, ModelMixin):
     set = database.Column(database.String(64))
 
     def __init__(self, sticker_id, set_name=None):
+        if Sticker.id_exists(sticker_id):
+            raise IntegrityError("Sticker exists")
+
         self.id = sticker_id
         self.set = set_name
         self.add_to_database()
@@ -116,15 +123,36 @@ class Sticker(database.Model, ModelMixin):
 
 class Label(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
-    text = database.Column(database.String(MAX_STRING_SIZE))
+    text = database.Column(database.String(MAX_STRING_SIZE),
+                           unique=True)
 
     def __init__(self, text):
+        if Label.exists(text):
+            raise IntegrityError("Label exists")
+
         self.text = text
         self.add_to_database()
 
     def __str__(self):
         return "ID: " + str(self.id) + \
                ", Text: " + str(self.text)
+
+    @classmethod
+    def get_or_create(cls, text, get_only=True):
+        query = cls.query.filter_by(text=text)
+
+        if query.count() == 0:
+            if not get_only:
+                return cls(text)
+            else:
+                return None
+        elif query.count() == 1:
+            return query.first()
+
+    @classmethod
+    def exists(cls, text):
+        query = cls.query.filter_by(text=text)
+        return query.count() > 0
 
 
 class Association(database.Model, ModelMixin):
@@ -148,6 +176,8 @@ class Association(database.Model, ModelMixin):
     database.relationship("Label", backref="associations", lazy="dynamic")
 
     def __init__(self, user, sticker, label):
+        if Association.exists(user, sticker, label):
+            raise IntegrityError("Association exists")
         self.user_id = user.id
         self.sticker_id = sticker.id
         self.label_id = label.id
@@ -157,3 +187,10 @@ class Association(database.Model, ModelMixin):
         return "User: " + str(self.user_id) + \
                ", Sticker: " + str(self.sticker_id) + \
                ", Label: " + str(self.label_id)
+
+    @classmethod
+    def exists(cls, user, sticker, label):
+        query = cls.query.filter_by(user_id=user.id,
+                                    sticker_id=sticker.id,
+                                    label_id=label.id)
+        return query.count() > 0

@@ -19,11 +19,13 @@ class Conversation(object):
         LABEL = 2
         CONFIRMED = 3
 
-    def __init__(self, user):
+    def __init__(self, user, chat):
         self.user = user
+        self.chat = chat
         self.state = Conversation.State.IDLE
         self.lock = threading.Lock()
         self.sticker = None
+        self.labels = None
         self._future = None
 
     # Returns True if state is None and self.state is IDLE
@@ -76,7 +78,7 @@ class Conversation(object):
     def change_state(self, new_state, future=None, force=False):
         if force:
             self.__change_state(new_state, future)
-            return
+            return True
 
         # Block until previous state's action is complete
         elif self._future:
@@ -104,6 +106,18 @@ class Conversation(object):
 
         return True
 
+    def update_future(self, new_future, force=False):
+        if force:
+            if self._future:
+                self._future.cancel()
+            self._future = new_future
+
+        if not force:
+            if self._future:
+                while not self._future.done():
+                    pass
+            self._future = new_future
+
     # timeout in seconds
     def get_future_result(self, timeout=3):
         if not self._future:
@@ -114,9 +128,12 @@ class Conversation(object):
             return None
 
 
-def get_or_create(telegram_user, get_only=False):
+def get_or_create(telegram_user, get_only=False, chat=None):
     conversation = None
     user_id = telegram_user.id
+
+    if not (get_only or chat):
+        raise ValueError("Pass in chat or get_only=True")
 
     with lock:
         logger.debug("Acquired conversations lock")
@@ -125,7 +142,7 @@ def get_or_create(telegram_user, get_only=False):
             conversation = all[user_id]
         elif not get_only:
             logger.debug("Creating new conversation")
-            conversation = Conversation(telegram_user)
+            conversation = Conversation(telegram_user, chat)
             all[user_id] = conversation
 
     return conversation

@@ -5,8 +5,7 @@ from enum import Enum
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
-import conversations
-import models
+from Text2StickerBot import conversations, models
 
 pool = concurrent.futures.ThreadPoolExecutor()
 
@@ -23,9 +22,39 @@ class Message(object):
         STICKER_EXISTS = ""
         UNKNOWN = ""
         RESTART = ""  # TODO Prompt to cancel or resume previous chain
+        LABEL_MISSING = ""
 
     class Other(Enum):
         SUCCESS = ""
+
+
+class CallbackData(object):
+    class ButtonText(Enum):
+        CONFIRM = "confirm"
+        CANCEL = "cancel"
+
+    SEPARATOR = "+"
+
+    # Strings
+    def __init__(self, state, state_identifier, button_text=None):
+        self.state = state
+        self.state_identifier = state_identifier
+        self.button_text = button_text
+
+    def generator(self, button_text):
+        return CallbackData.SEPARATOR.join([button_text.value,
+                                            self.state.name,
+                                            self.state_identifier])
+
+    @classmethod
+    def unwrap(cls, callback_string):
+        button_text_value, state_name, state_identifier = callback_string.split(
+            cls.SEPARATOR)
+
+        state = getattr(conversations.Conversation.State, state_name)
+        button_text = CallbackData.ButtonText(button_text_value)
+
+        return cls(state, state_identifier, button_text)
 
 
 # Add user to database if user is new
@@ -69,7 +98,8 @@ def create_sticker_handler(app):
         sticker = update.effective_message.sticker
         chat_id = update.effective_chat.id
 
-        conversation = conversations.get_or_create(user)
+        conversation = conversations.get_or_create(user,
+                                                   chat=update.effective_chat)
 
         with conversation.lock:
             changed = False
@@ -103,52 +133,96 @@ def create_sticker_handler(app):
     return sticker_handler
 
 
+def get_labels(update):
+    raw_text = update.effective_message.text
+    labels = raw_text.split()
+    return labels
+
+
 def create_labels_handler(app):
     @run_async
     def labels_handler(bot, update):
+        logger = logging.getLogger("handler.labels")
+        logger.debug("Handling labels")
+
         user = update.effective_user
+        chat_id = update.effective_chat.id
 
         conversation = conversations.get_or_create(user, get_only=True)
-
         if not conversation:
-            bot.send_message(user.chat_id, Message.Error.NOT_STARTED.value)
+            bot.send_message(chat_id, Message.Error.NOT_STARTED.value)
+            return
+
+        try:
+            with conversation.lock:
+                changed = conversation.change_state(
+                    conversations.Conversation.State.LABEL)
+        except ValueError:  # State transition error
+            bot.send_message(chat_id, Message.Error.RESTART.value)
+            return
+
+        if not changed:
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            return
+
+        sticker = conversation.sticker
+
+        new_labels = get_labels(update)
+        if not new_labels:
+            bot.send_message(chat_id, Message.Error.LABEL_MISSING.value)
             return
 
         with conversation.lock:
-            conversation.change_state(
-                conversations.Conversation.State.LABEL,
-                pool.submit(confirm_sticker_name, bot, update))
+            conversation.labels = new_labels
+        # TODO Include existing labels
+        if len(new_labels) > 1:
+            message_labels = "/n".join(new_labels)
+        else:
+            message_labels = new_labels[0]
+
+        message_text = Message.Instruction.CONFIRM.value + message_labels
+
+        buttons = [[CallbackData.ButtonText.CONFIRM,
+                    CallbackData.ButtonText.CANCEL]]
+        generator = CallbackData(conversations.Conversation.State.LABEL,
+                                 sticker.file_id).generator
+        inline_keyboard_markup = generate_inline_keyboard_markup(
+            generator, buttons)  # TODO Add re-label
+
+        bot.send_sticker(chat_id, sticker)
+        bot.send_message(chat_id,
+                         message_text,
+                         reply_markup=inline_keyboard_markup)
 
     return labels_handler
 
 
-def confirm_sticker_name(bot, update):
-    # TODO Send confirmation message to user with sticker and labels
-    pass
+# state: (state_type, identifier)
+# button_texts: [[row1_text1, row1_text2, ...],
+#           [row2_text1, row2_text2, ...]]
+# Returns [[row1_callback1, row1_callback2, ...],
+#          [row2_callback1, row2_callback2, ...]]
+#         corresponds to buttons
+def generate_inline_keyboard_markup(callback_data_generator, button_texts):
+    buttons = []
+
+    for row in button_texts:
+        button_row = []
+        for button_text in row:
+            button = telegram.InlineKeyboardButton(
+                button_text,
+                callback_data=callback_data_generator(button_text))
+            button_row.append(button)
+        buttons.append(button_row)
+
+    return telegram.InlineKeyboardMarkup(buttons)
 
 
-def create_confirmation_handler(app):
-    @run_async
-    def confirmation_handler(bot, update):
-        user = update.effective_user
+def create_callback_handler(app):
+    def callback_handler(bot, update):
+        pass
 
-        conversation = conversations.get_or_create(user, get_only=True)
-
-        if not conversation:
-            bot.send_message(user.chat_id, Message.Error.NOT_STARTED.value)
-            return
-
-        text = update.effective_message.text.lower()
-        if text == "yes" or text == "y":
-            conversation = conversations.all[user.id]
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.LABEL,
-                    pool.submit(add_sticker, bot, update, conversation))
-        else:
-            bot.send_message(user.chat_id, Message.Instruction.RE_LABEL.value)
-
-    return confirmation_handler
+    return callback_handler
 
 
 def add_sticker(bot, update, conversation):
@@ -184,8 +258,7 @@ def register_handlers(dispatcher, app):
                                     create_labels_handler(app)))
 
     dispatcher.add_handler(
-        telegram.ext.MessageHandler(telegram.ext.Filters.text,
-                                    create_confirmation_handler(app)))
+        telegram.ext.CallbackQueryHandler(create_callback_handler(app)))
 
     dispatcher.add_handler(
         telegram.ext.InlineQueryHandler(create_inline_query_handler(app)))

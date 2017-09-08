@@ -146,7 +146,7 @@ class Label(database.Model, ModelMixin):
                ", Text: " + str(self.text)
 
     @classmethod
-    def get_or_create(cls, text, get_only=True):
+    def get_or_create(cls, text, get_only=False):
         query = cls.query.filter_by(text=text)
 
         if query.count() == 0:

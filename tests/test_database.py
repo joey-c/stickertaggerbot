@@ -97,3 +97,15 @@ class TestInsertion(object):
             assert models.Association.count() == 1
 
             clear_all_tables()
+
+
+class TestRetrieval(object):
+    def test_label_get(self):
+        label_text = "label"
+
+        with app_for_testing.app_context():
+            label = models.Label(label_text)
+            retrieved_label = models.Label.get_or_create(label_text)
+            assert label == retrieved_label
+
+            clear_all_tables()

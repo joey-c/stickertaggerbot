@@ -169,6 +169,18 @@ class TestChangeState(object):
         assert conversation._future == incomplete_future
 
 
+class TestUpdateFuture(object):
+    def test_force(self, conversation, incomplete_future, completed_future):
+        conversation._future = incomplete_future
+        conversation.update_future(completed_future, force=True)
+        assert conversation._future == completed_future
+
+    def test_normal(self, conversation, completed_future, incomplete_future):
+        conversation._future = completed_future
+        conversation.update_future(incomplete_future)
+        assert conversation._future == incomplete_future
+
+
 class TestGetFutureResult(object):
     def test_incomplete_future(self, conversation, incomplete_future):
         conversation._future = incomplete_future

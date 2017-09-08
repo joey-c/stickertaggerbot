@@ -75,7 +75,7 @@ class TestStickerHandler(object):
 
         assert conversation.sticker == update.effective_message.sticker
         conversation.change_state.assert_called_once()
-        assert conversation.rollback_state.call_args == None
+        assert conversation.rollback_state.call_args is None
 
         bot.send_message.assert_called_once_with(
             update.effective_chat.id,
@@ -86,8 +86,8 @@ class TestStickerHandler(object):
 
         run_handler(handlers.create_sticker_handler, update)
 
-        assert conversation.change_state.call_args == None
-        assert conversation.rollback_state.call_args == None
+        assert conversation.change_state.call_args is None
+        assert conversation.rollback_state.call_args is None
         bot.send_message.assert_called_once_with(
             update.effective_chat.id,
             handlers.Message.Error.RESTART.value)

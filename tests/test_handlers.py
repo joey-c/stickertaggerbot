@@ -1,10 +1,11 @@
+import time
 import pytest
 from unittest import mock
 
 from Text2StickerBot import handlers, conversations
 
 from tests import telegram_factories
-from tests.misc import app_for_testing
+from tests.misc import app_for_testing, clear_all_tables
 
 bot = app_for_testing.bot
 States = conversations.Conversation.State
@@ -202,3 +203,81 @@ class TestLabelsHandler(object):
 
         bot.send_sticker.assert_called_once_with(chat_id, sticker)
         bot.send_message.assert_called_once()
+
+
+class TestCallbackQueryHandlerInLabelState(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        bot.send_message = mock.Mock()
+
+    @pytest.fixture(autouse=True)
+    def patch_database(self):
+        handlers.models.database.session.commit = mock.MagicMock()
+
+    @pytest.fixture()
+    def sticker(self):
+        return telegram_factories.StickerFactory()
+
+    @pytest.fixture()
+    def callback_query_update(self):
+        def update_maker(conversation, button_text):
+            callback_data = handlers.CallbackData(
+                States.LABEL, conversation.sticker.file_id)
+            callback_data_text = callback_data.generator(button_text)
+
+            update = telegram_factories.CallbackQueryUpdateFactory(
+                callback_query__from_user=conversation.user,
+                callback_query__data=callback_data_text,
+                callback_query__chat_instance=str(conversation.chat.id))
+
+            return update
+
+        return update_maker
+
+    def test_confirm(self, conversation, sticker, callback_query_update):
+        conversation.sticker = sticker
+        conversation.labels = ["label1", "label2", "label3"]
+        conversation.change_state = mock.MagicMock(autospec=True,
+                                                   return_value=True)
+        handlers.conversations.get_or_create = mock.MagicMock(
+            autospec=True,
+            return_value=conversation)
+
+        handlers.models.User.id_exists = mock.MagicMock(return_value=False)
+        with app_for_testing.app_context():
+            database_user = handlers.models.User.from_telegram_user(
+                conversation.user, conversation.chat.id)
+        handlers.models.User.get = mock.MagicMock(autospec=True,
+                                                  return_value=database_user)
+
+        handlers.models.Association.exists = mock.MagicMock(return_value=False)
+
+        update = callback_query_update(
+            conversation, handlers.CallbackData.ButtonText.CONFIRM)
+
+        run_handler(handlers.create_callback_handler, update)
+
+        time.sleep(2)
+
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+        bot.send_message.assert_called_once_with(
+            conversation.chat.id, handlers.Message.Other.SUCCESS.value)
+
+        assert handlers.models.Association.exists.call_count == len(
+            conversation.labels)
+
+    def test_cancel(self, conversation, sticker, callback_query_update):
+        conversation.sticker = sticker
+        handlers.conversations.get_or_create = mock.MagicMock(
+            autospec=True,
+            return_value=conversation)
+
+        update = callback_query_update(
+            conversation, handlers.CallbackData.ButtonText.CANCEL)
+
+        run_handler(handlers.create_callback_handler, update)
+
+        bot.send_message.assert_called_once_with(
+            conversation.chat.id, handlers.Message.Instruction.RE_LABEL.value)

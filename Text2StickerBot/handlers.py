@@ -219,20 +219,62 @@ def generate_inline_keyboard_markup(callback_data_generator, button_texts):
 
 
 def create_callback_handler(app):
+    @run_async
     def callback_handler(bot, update):
-        pass
+        callback_data = CallbackData.unwrap(update.callback_query.data)
+        user = update.effective_user
+        chat_id = update.effective_chat.id
+
+        conversation = conversations.get_or_create(user.id, get_only=True)
+        if not conversation:
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+
+        if callback_data.state == conversations.Conversation.State.LABEL:
+            if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
+                with conversation.lock:
+                    successful = conversation.change_state(
+                        conversations.Conversation.State.CONFIRMED,
+                        pool.submit(
+                            add_sticker, app, bot, update, conversation))
+                if successful:
+                    bot.send_message(chat_id, Message.Other.SUCCESS.value)
+            elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
+                with conversation.lock:
+                    conversation.labels = None
+                bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
 
     return callback_handler
 
 
-def add_sticker(bot, update, conversation):
+def add_sticker(app, bot, update, conversation):
     user = update.effective_user
+    chat_id = update.effective_chat.id
+    sticker = conversation.sticker
 
-    # TODO Add sticker
+    with app.app_context():
+        try:
+            database_user = models.User.get(user.id)
+            database_sticker = models.Sticker.get_or_create(sticker)
 
-    bot.send_message(user.chat_id, Message.Other.SUCCESS.value)
+            for label in conversation.labels:
+                database_label = models.Label.get_or_create(label)
 
-    # TODO Change conversation state to IDLE
+                # TODO Work with existing labels
+                association = models.Association(
+                    database_user, database_sticker, database_label)
+        except Exception as e:
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            models.database.session.rollback()
+            with conversation.lock:
+                conversation.rollback_state()
+            return False
+        else:
+            with conversation.lock:
+                conversation.change_state(
+                    conversations.Conversation.State.IDLE)
+            models.database.session.commit()
+
+    return True
 
 
 def create_inline_query_handler(app):

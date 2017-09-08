@@ -100,6 +100,22 @@ class StickerMessageFactory(MessageFactory):
     sticker = factory.SubFactory(StickerFactory)
 
 
+class CallbackQueryFactory(factory.Factory):
+    class Meta:
+        model = telegram.CallbackQuery
+
+    # Required arguments
+    id = factory.Sequence(lambda n: "cq_" + str(n))
+    from_user = factory.SubFactory(UserFactory)
+    chat_instance = factory.Sequence(lambda n: str(n))
+    data = None
+    message = factory.SubFactory(
+        MessageFactory,
+        user=factory.SubFactory(BotFactory),
+        chat__id=factory.LazyAttribute(
+            lambda chat: int(chat.factory_parent.factory_parent.chat_instance)))
+
+
 class UpdateFactory(factory.Factory):
     class Meta:
         model = telegram.Update
@@ -123,3 +139,7 @@ class StickerUpdateFactory(UpdateFactory):
 
 class CommandUpdateFactory(UpdateFactory):
     message = factory.SubFactory(CommandMessageFactory)
+
+
+class CallbackQueryUpdateFactory(UpdateFactory):
+    callback_query = factory.SubFactory(CallbackQueryFactory)

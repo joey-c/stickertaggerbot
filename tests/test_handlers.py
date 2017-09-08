@@ -10,16 +10,17 @@ bot = app_for_testing.bot
 States = conversations.Conversation.State
 
 
-
-
 # Returns a new mock Conversation instance, and mocks the class
 @pytest.fixture()
 def conversation():
     handlers.conversations.Conversation = mock.MagicMock(
         spec=handlers.conversations.Conversation)
-    mock_conversation = handlers.conversations.Conversation(
-        telegram_factories.UserFactory(),
-        telegram_factories.ChatFactory())
+
+    user = telegram_factories.UserFactory()
+    chat = telegram_factories.ChatFactory()
+    mock_conversation = handlers.conversations.Conversation(user, chat)
+    mock_conversation.user = user
+    mock_conversation.chat = chat
 
     return mock_conversation
 

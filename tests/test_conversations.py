@@ -3,7 +3,7 @@ import concurrent.futures
 import pytest
 from unittest import mock
 
-import conversations
+from Text2StickerBot import conversations
 from tests import telegram_factories
 
 States = conversations.Conversation.State

@@ -1,4 +1,4 @@
-import models
+from Text2StickerBot import models
 from tests.misc import clear_all_tables, app_for_testing
 
 models.sqlalchemy_logging(True)

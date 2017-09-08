@@ -1,5 +1,4 @@
-import flask_app
-import models
+from Text2StickerBot import flask_app, models
 
 app_for_testing = flask_app.Application()
 

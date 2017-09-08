@@ -1,9 +1,7 @@
-import telegram
 import pytest
 from unittest import mock
 
-import handlers
-import conversations
+from Text2StickerBot import handlers, conversations
 
 from tests import telegram_factories
 from tests.misc import app_for_testing

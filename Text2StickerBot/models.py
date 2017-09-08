@@ -98,7 +98,7 @@ class User(database.Model, ModelMixin):
 
 
 class Sticker(database.Model, ModelMixin):
-    id = database.Column(database.Integer, primary_key=True)
+    id = database.Column(database.String(MAX_STRING_SIZE), primary_key=True)
 
     # Length derived from
     # http://python-telegram-bot.readthedocs.io/en/stable/telegram.bot.html#telegram.Bot.create_new_sticker_set
@@ -112,13 +112,21 @@ class Sticker(database.Model, ModelMixin):
         self.set = set_name
         self.add_to_database()
 
+    def __str__(self):
+        return "ID: " + str(self.id)
+
     @classmethod
     def from_telegram_sticker(cls, telegram_sticker):
         return cls(telegram_sticker.file_id,
                    telegram_sticker.set_name)
 
-    def __str__(self):
-        return "ID: " + str(self.id)
+    @classmethod
+    def get_or_create(cls, telegram_sticker, get_only=False):
+        sticker = cls.get(telegram_sticker.file_id)
+        if sticker:
+            return sticker
+        else:
+            return cls.from_telegram_sticker(telegram_sticker)
 
 
 class Label(database.Model, ModelMixin):
@@ -138,7 +146,7 @@ class Label(database.Model, ModelMixin):
                ", Text: " + str(self.text)
 
     @classmethod
-    def get_or_create(cls, text, get_only=True):
+    def get_or_create(cls, text, get_only=False):
         query = cls.query.filter_by(text=text)
 
         if query.count() == 0:

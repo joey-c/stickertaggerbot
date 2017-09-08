@@ -10,11 +10,6 @@ bot = app_for_testing.bot
 States = conversations.Conversation.State
 
 
-def patch_database():
-    handlers.models.User.add_to_database = mock.Mock(autospec=True,
-                                                     return_value=None)
-    handlers.models.database.session.commit = mock.Mock(autospec=True,
-                                                        return_value=None)
 
 
 # Returns a new mock Conversation instance, and mocks the class
@@ -39,8 +34,12 @@ class TestStartCommandHandler(object):
     def patch_telegram(self):
         bot.send_message = mock.Mock()
 
+    def patch_database(self):
+        handlers.models.User.add_to_database = mock.Mock(autospec=True)
+        handlers.models.database.session.commit = mock.Mock(autospec=True)
+
     def test_new_user(self):
-        patch_database()
+        self.patch_database()
 
         handlers.models.User.get = mock.Mock(autospec=True,
                                              return_value=None)

@@ -48,8 +48,8 @@ class CallbackData(object):
 
     @classmethod
     def unwrap(cls, callback_string):
-        button_text_value, state_name, state_identifier = callback_string.split(
-            cls.SEPARATOR)
+        button_text_value, state_name, state_identifier \
+            = callback_string.split(cls.SEPARATOR)
 
         state = getattr(conversations.Conversation.State, state_name)
         button_text = CallbackData.ButtonText(button_text_value)

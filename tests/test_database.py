@@ -2,6 +2,7 @@ import pytest
 from sqlite3 import IntegrityError
 
 from Text2StickerBot import models
+from tests import telegram_factories
 from tests.misc import clear_all_tables, app_for_testing
 
 models.sqlalchemy_logging(True)
@@ -109,3 +110,39 @@ class TestRetrieval(object):
             assert label == retrieved_label
 
             clear_all_tables()
+
+    # TODO: Test more exhaustively
+    def test_retrieve_sticker_by_label(self):
+        telegram_users = [telegram_factories.UserFactory(id=n) for n in
+                          range(1, 4)]
+        raw_sticker_ids = [("sticker_" + str(n)) for n in range(1, 4)]
+        label_texts = [("label_" + str(n)) for n in range(1, 4)]
+
+        with app_for_testing.app_context():
+            labels = [models.Label(text) for text in label_texts]
+
+            stickers = [models.Sticker(sticker_id) for sticker_id in
+                        raw_sticker_ids]
+
+            users = [models.User.from_telegram_user(
+                user, telegram_factories.ChatFactory().id)
+                for user in telegram_users]
+
+            models.Association(users[0], stickers[0], labels[0])
+            models.Association(users[0], stickers[0], labels[1])
+            models.Association(users[0], stickers[1], labels[1])
+
+            models.Association(users[1], stickers[0], labels[0])
+            models.Association(users[1], stickers[0], labels[1])
+            models.Association(users[1], stickers[1], labels[0])
+
+            models.Association(users[2], stickers[2], labels[0])
+            models.Association(users[2], stickers[2], labels[1])
+            models.Association(users[2], stickers[2], labels[2])
+
+            label_ids = models.Label.get_ids(label_texts[1:])
+            assert set(label_ids) == {2, 3}
+
+            sticker_ids = models.Association.get_sticker_ids(
+                users[1].id, label_texts[1:])
+            assert sticker_ids == [raw_sticker_ids[0]]

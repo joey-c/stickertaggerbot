@@ -162,6 +162,17 @@ class Label(database.Model, ModelMixin):
         query = cls.query.filter_by(text=text)
         return query.count() > 0
 
+    @classmethod
+    def query_get_ids(cls, texts):
+        select_ids = cls.query.with_entities(cls.id)
+        any_texts = cls.text.in_(texts)
+        return select_ids.filter(any_texts)
+
+    @classmethod
+    def get_ids(cls, texts):
+        label_ids = cls.query_get_ids(texts).all()
+        return [label_id for label_id, in label_ids]
+
 
 class Association(database.Model, ModelMixin):
     id = database.Column(database.Integer, primary_key=True)
@@ -202,3 +213,15 @@ class Association(database.Model, ModelMixin):
                                     sticker_id=sticker.id,
                                     label_id=label.id)
         return query.count() > 0
+
+    @classmethod
+    def query_get_sticker_ids(cls, user_id, labels):
+        label_ids = Label.get_ids(labels)
+        select_sticker_ids = cls.query.with_entities(cls.sticker_id)
+        any_labels = cls.label_id.in_(label_ids)
+        return select_sticker_ids.filter_by(user_id=user_id).filter(any_labels)
+
+    @classmethod
+    def get_sticker_ids(cls, user_id, labels):
+        sticker_ids = cls.query_get_sticker_ids(user_id, labels).all()
+        return [sticker_id for sticker_id, in sticker_ids]

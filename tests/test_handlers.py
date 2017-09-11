@@ -281,3 +281,78 @@ class TestCallbackQueryHandlerInLabelState(object):
 
         bot.send_message.assert_called_once_with(
             conversation.chat.id, handlers.Message.Instruction.RE_LABEL.value)
+
+
+class TestInlineQueryHandler(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        bot.answer_inline_query = mock.Mock()
+
+    def patch_user_association(self, result):
+        filter_return = mock.MagicMock()
+        filter_return.count = mock.MagicMock(return_value=result)
+        query = mock.MagicMock()
+        query.filter_by = mock.MagicMock(autospec=True,
+                                         return_value=filter_return)
+        handlers.models.Association.query = query
+
+    def test_new_user(self):
+        self.patch_user_association(0)
+
+        update = telegram_factories.InlineQueryUpdateFactory(
+            inline_query__query="label",
+            inline_query__bot=bot)
+
+        run_handler(handlers.create_inline_query_handler, update)
+
+        bot.answer_inline_query.assert_called_once_with(
+            update.inline_query.id,
+            is_personal=True,
+            switch_pm_text=handlers.Message.Error.NOT_STARTED.value)
+
+    def test_no_stickers(self):
+        self.patch_user_association(1)
+
+        update = telegram_factories.InlineQueryUpdateFactory(
+            inline_query__query="label",
+            inline_query__bot=bot)
+
+        handlers.models.Association.get_sticker_ids = mock.MagicMock(
+            autospec=True, return_value=[])
+
+        run_handler(handlers.create_inline_query_handler, update)
+
+        bot.answer_inline_query.assert_called_once_with(
+            update.inline_query.id,
+            is_personal=True,
+            switch_pm_text=handlers.Message.Error.NO_MATCHES.value)
+
+    def test_one_label(self):
+        self.patch_user_association(1)
+
+        update = telegram_factories.InlineQueryUpdateFactory(
+            inline_query__query="label",
+            inline_query__bot=bot)
+
+        sticker_id = telegram_factories.StickerFactory().file_id
+        handlers.models.Association.get_sticker_ids = mock.MagicMock(
+            autospec=True, return_value=[sticker_id])
+
+        sticker_result = handlers.StickerResult(sticker_id)
+        handlers.StickerResult = mock.MagicMock(return_value=sticker_result)
+
+        run_handler(handlers.create_inline_query_handler, update)
+
+        bot.answer_inline_query.assert_called_once_with(
+            update.inline_query.id, [sticker_result], is_personal=True)
+
+    # Sort stickers by number of matching labels
+    def test_multiple_labels(self):
+        pass
+
+    # Sort stickers by number of matching labels, then by frequency of usage
+    def test_multiple_labels_with_usage_frequency(self):
+        pass
+
+    def test_pagination(self):
+        pass

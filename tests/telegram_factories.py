@@ -23,7 +23,7 @@ class UserFactory(factory.Factory):
 
     # Optional arguments
     last_name = "Last"
-    username = "username"
+    username = factory.Sequence(lambda n: "username_" + str(n))
     language_code = None
     bot = factory.SubFactory(BotFactory)
 

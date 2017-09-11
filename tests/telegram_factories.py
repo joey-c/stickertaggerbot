@@ -113,7 +113,19 @@ class CallbackQueryFactory(factory.Factory):
         MessageFactory,
         user=factory.SubFactory(BotFactory),
         chat__id=factory.LazyAttribute(
-            lambda chat: int(chat.factory_parent.factory_parent.chat_instance)))
+            lambda chat: int(
+                chat.factory_parent.factory_parent.chat_instance)))
+
+
+class InlineQueryFactory(factory.Factory):
+    class Meta:
+        model = telegram.InlineQuery
+
+    # Required arguments
+    id = factory.sequence(lambda n: "iq_" + str(n))
+    from_user = factory.SubFactory(UserFactory)
+    query = ""
+    offset = ""
 
 
 class UpdateFactory(factory.Factory):
@@ -139,6 +151,10 @@ class StickerUpdateFactory(UpdateFactory):
 
 class CommandUpdateFactory(UpdateFactory):
     message = factory.SubFactory(CommandMessageFactory)
+
+
+class InlineQueryUpdateFactory(UpdateFactory):
+    inline_query = factory.SubFactory(InlineQueryFactory)
 
 
 class CallbackQueryUpdateFactory(UpdateFactory):

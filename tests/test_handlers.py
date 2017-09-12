@@ -140,7 +140,7 @@ class TestLabelsHandler(object):
 
     def test_interrupted_conversation(self, conversation):
         conversation.change_state = mock.Mock(
-            autospec=True, return_value=False)
+            autospec=True, side_effect=ValueError)
         update = telegram_factories.MessageUpdateFactory(
             message__from_user=conversation.user)
         chat_id = update.effective_chat.id
@@ -152,9 +152,14 @@ class TestLabelsHandler(object):
         bot.send_message.assert_called_once_with(
             chat_id, handlers.Message.Error.RESTART.value)
 
-    def test_empty_labels(self):
+    def test_empty_labels(self, conversation):
+        conversation.labels = None
+        handlers.conversations.get_or_create = mock.Mock(
+            autospec=True, return_value=conversation)
+
         update = telegram_factories.MessageUpdateFactory(message__text="")
         chat_id = update.effective_chat.id
+
         run_handler(handlers.create_labels_handler, update)
 
         bot.send_message.assert_called_once_with(

@@ -20,4 +20,4 @@ def route_update():
     update_json = flask.request.get_json()
     update = telegram.Update.de_json(update_json, application.bot)
     application.update_queue.put(update)
-    return "put an update"
+    return ""

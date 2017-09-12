@@ -20,6 +20,7 @@ class UserFactory(factory.Factory):
     # Required arguments
     id = factory.Sequence(lambda n: n)
     first_name = "First"
+    is_bot = False
 
     # Optional arguments
     last_name = "Last"

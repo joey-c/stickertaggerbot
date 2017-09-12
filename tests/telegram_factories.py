@@ -74,14 +74,22 @@ class MessageEntity(factory.Factory):
 
     # Required arguments
     type = None
-    offset = None
     length = None
+    offset = 0
 
 
 class CommandMessageFactory(MessageFactory):
-    entities = factory.List([
-        factory.SubFactory(MessageEntity,
-                           type=telegram.MessageEntity.BOT_COMMAND)])
+    class Params:
+        command = "/command"
+
+    entities = factory.List([factory.SubFactory(
+        MessageEntity,
+        type=telegram.MessageEntity.BOT_COMMAND,
+        length=factory.LazyAttribute(
+            lambda entity: len(
+                entity.factory_parent.factory_parent.command)))])
+
+    text = factory.LazyAttribute(lambda self: self.command)
 
 
 class StickerFactory(factory.Factory):
@@ -151,7 +159,13 @@ class StickerUpdateFactory(UpdateFactory):
 
 
 class CommandUpdateFactory(UpdateFactory):
-    message = factory.SubFactory(CommandMessageFactory)
+    class Params:
+        command = "/command"
+
+    message = factory.SubFactory(
+        CommandMessageFactory,
+        command=factory.LazyAttribute(
+            lambda message: message.factory_parent.command))
 
 
 class InlineQueryUpdateFactory(UpdateFactory):

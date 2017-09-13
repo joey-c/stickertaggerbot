@@ -244,27 +244,50 @@ def create_callback_handler(app):
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
 
         if callback_data.state == conversations.Conversation.State.LABEL:
-            if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
-                try:
-                    with conversation.lock:
-                        conversation.change_state(
-                            conversations.Conversation.State.CONFIRMED,
-                            pool.submit(
-                                add_sticker, app, bot, update, conversation))
-                except ValueError as e:
-                    # TODO Log error
-                    state, = e.args
-                    bot.send_message(chat_id, Message.Error.UNKNOWN.value)
-
-                successful = conversation.get_future_result()
-                if successful:
-                    bot.send_message(chat_id, Message.Other.SUCCESS.value)
-            elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
-                with conversation.lock:
-                    conversation.labels = None
-                bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
+            handle_callback_for_labels(app, bot, update)
 
     return callback_handler
+
+
+def handle_callback_for_labels(app, bot, update):
+    callback_data = CallbackData.unwrap(update.callback_query.data)
+    chat_id = update.effective_chat.id
+    conversation = conversations.get_or_create(
+        update.effective_user, get_only=True)
+
+    if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
+        try:
+            with conversation.lock:
+                conversation.change_state(
+                    conversations.Conversation.State.CONFIRMED,
+                    pool.submit(add_sticker, app, bot, update, conversation))
+        except ValueError as e:
+            # TODO Log error
+            state, = e.args
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            return
+
+        added = conversation.get_future_result()
+        if added:
+            try:
+                with conversation.lock:
+                    conversation.change_state(
+                        conversations.Conversation.State.IDLE)
+            except ValueError as e:
+                # TODO Log error
+                state, = e.args
+                bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+                return
+
+            bot.send_message(chat_id, Message.Other.SUCCESS.value)
+            models.database.session.commit()
+        else:
+            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+
+    elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
+        with conversation.lock:
+            conversation.labels = None
+        bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
 
 
 def add_sticker(app, bot, update, conversation):

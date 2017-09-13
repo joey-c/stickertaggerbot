@@ -119,10 +119,9 @@ def create_sticker_handler(app):
                                                    chat=update.effective_chat)
 
         try:
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.STICKER,
-                    pool.submit(sticker_is_new, app, user, sticker))
+            conversation.change_state(
+                conversations.Conversation.State.STICKER,
+                pool.submit(sticker_is_new, app, user, sticker))
         except ValueError as e:
             # TODO Ask user if they want to cancel previous conversation
             # TODO Log error
@@ -170,9 +169,8 @@ def create_labels_handler(app):
             return
 
         try:
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.LABEL)
+            conversation.change_state(
+                conversations.Conversation.State.LABEL)
         except ValueError as e:
             # TODO Log error
             state, = e.args
@@ -257,10 +255,9 @@ def handle_callback_for_labels(app, bot, update):
 
     if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
         try:
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.CONFIRMED,
-                    pool.submit(add_sticker, app, bot, update, conversation))
+            conversation.change_state(
+                conversations.Conversation.State.CONFIRMED,
+                pool.submit(add_sticker, app, bot, update, conversation))
         except ValueError as e:
             # TODO Log error
             state, = e.args
@@ -270,9 +267,8 @@ def handle_callback_for_labels(app, bot, update):
         added = conversation.get_future_result()
         if added:
             try:
-                with conversation.lock:
-                    conversation.change_state(
-                        conversations.Conversation.State.IDLE)
+                conversation.change_state(
+                    conversations.Conversation.State.IDLE)
             except ValueError as e:
                 # TODO Log error
                 state, = e.args
@@ -310,8 +306,7 @@ def add_sticker(app, bot, update, conversation):
         except Exception as e:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             models.database.session.rollback()
-            with conversation.lock:
-                conversation.rollback_state()
+            conversation.rollback_state()
             return False
 
     return True

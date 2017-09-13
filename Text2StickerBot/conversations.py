@@ -46,16 +46,18 @@ class Conversation(object):
         return self.state == Conversation.State.IDLE
 
     def reset_state(self):
-        self.state = Conversation.State.IDLE
-        if self._future:
-            self._future.cancel()
-        self._future = None
+        with self.lock:
+            self.state = Conversation.State.IDLE
+            if self._future:
+                self._future.cancel()
+            self._future = None
 
     def __change_state(self, new_state, future):
-        self.state = new_state
-        if self._future:
-            self._future.cancel()
-        self._future = future
+        with self.lock:
+            self.state = new_state
+            if self._future:
+                self._future.cancel()
+            self._future = future
 
     # Change state to typical previous state, unless otherwise specified
     # If specifying future, state must also be specified
@@ -63,27 +65,28 @@ class Conversation(object):
         if future and not state:
             raise ValueError()
 
-        if state:
-            if self.state == Conversation.State.STICKER:
-                self.sticker = None
-            elif self.state == Conversation.State.LABEL:
-                self.labels = None
-            self.state = state
+        with self.lock:
+            if state:
+                if self.state == Conversation.State.STICKER:
+                    self.sticker = None
+                elif self.state == Conversation.State.LABEL:
+                    self.labels = None
+                self.state = state
 
-        if future:
-            self._future = future
+            if future:
+                self._future = future
 
-        if state is None and future is None:
-            if self._future:
-                self._future.cancel()
+            if state is None and future is None:
+                if self._future:
+                    self._future.cancel()
 
-            if self.state == Conversation.State.STICKER:
-                self.sticker = None
-            elif self.state == Conversation.State.LABEL:
-                self.labels = None
+                if self.state == Conversation.State.STICKER:
+                    self.sticker = None
+                elif self.state == Conversation.State.LABEL:
+                    self.labels = None
 
-            if self.state != Conversation.State.IDLE:
-                self.state = Conversation.State(self.state.value - 1)
+                if self.state != Conversation.State.IDLE:
+                    self.state = Conversation.State(self.state.value - 1)
 
     def change_state(self, new_state, future=None, force=False):
         if force:
@@ -115,15 +118,17 @@ class Conversation(object):
 
     def update_future(self, new_future, force=False):
         if force:
-            if self._future:
-                self._future.cancel()
-            self._future = new_future
+            with self.lock:
+                if self._future:
+                    self._future.cancel()
+                self._future = new_future
 
         if not force:
             if self._future:
                 while not self._future.done():
                     pass
-            self._future = new_future
+            with self.lock:
+                self._future = new_future
 
     # timeout in seconds
     def get_future_result(self, timeout=3):

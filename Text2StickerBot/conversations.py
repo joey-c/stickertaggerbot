@@ -13,7 +13,7 @@ class Conversation(object):
     # STICKER may hijack the order if the user sends a new sticker
     #   and cancels the previous chain.
     # LABEL may repeat if user replies negatively to confirmation
-    class State(enum.Enum):
+    class State(enum.Enum):  # TODO Add pending confirmation state
         IDLE = 0
         STICKER = 1
         LABEL = 2
@@ -23,10 +23,26 @@ class Conversation(object):
         self.user = user
         self.chat = chat
         self.state = Conversation.State.IDLE
-        self.lock = threading.Lock()
-        self.sticker = None
-        self.labels = None
+        self._lock = threading.Lock()
+        self._sticker = None
+        self._labels = None
         self._future = None
+
+    @property
+    def sticker(self):
+        return self._sticker
+
+    @sticker.setter
+    def sticker(self, sticker):
+        self._sticker = sticker
+
+    @property
+    def labels(self):
+        return self._labels
+
+    @labels.setter
+    def labels(self, labels):
+        self._labels = labels
 
     # Returns True if state is None and self.state is IDLE
     #                 state is None and future is done
@@ -46,14 +62,14 @@ class Conversation(object):
         return self.state == Conversation.State.IDLE
 
     def reset_state(self):
-        with self.lock:
+        with self._lock:
             self.state = Conversation.State.IDLE
             if self._future:
                 self._future.cancel()
             self._future = None
 
     def __change_state(self, new_state, future):
-        with self.lock:
+        with self._lock:
             self.state = new_state
             if self._future:
                 self._future.cancel()
@@ -65,7 +81,7 @@ class Conversation(object):
         if future and not state:
             raise ValueError()
 
-        with self.lock:
+        with self._lock:
             if state:
                 if self.state == Conversation.State.STICKER:
                     self.sticker = None
@@ -118,7 +134,7 @@ class Conversation(object):
 
     def update_future(self, new_future, force=False):
         if force:
-            with self.lock:
+            with self._lock:
                 if self._future:
                     self._future.cancel()
                 self._future = new_future
@@ -127,7 +143,7 @@ class Conversation(object):
             if self._future:
                 while not self._future.done():
                     pass
-            with self.lock:
+            with self._lock:
                 self._future = new_future
 
     # timeout in seconds

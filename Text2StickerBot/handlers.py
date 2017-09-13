@@ -133,8 +133,7 @@ def create_sticker_handler(app):
 
         if new_sticker:
             bot.send_message(chat_id, Message.Instruction.LABEL.value)
-            with conversation.lock:
-                conversation.sticker = sticker
+            conversation.sticker = sticker
         elif new_sticker is False:
             logger.debug("Sticker exists")
             bot.send_message(chat_id, Message.Error.STICKER_EXISTS.value)
@@ -184,8 +183,7 @@ def create_labels_handler(app):
             bot.send_message(chat_id, Message.Error.LABEL_MISSING.value)
             return
 
-        with conversation.lock:
-            conversation.labels = new_labels
+        conversation.labels = new_labels
         # TODO Include existing labels
         if len(new_labels) > 1:
             message_labels = "/n".join(new_labels)
@@ -281,8 +279,7 @@ def handle_callback_for_labels(app, bot, update):
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
 
     elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
-        with conversation.lock:
-            conversation.labels = None
+        conversation.labels = None
         bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
 
 

@@ -242,7 +242,7 @@ def create_callback_handler(app):
         user = update.effective_user
         chat_id = update.effective_chat.id
 
-        conversation = conversations.get_or_create(user.id, get_only=True)
+        conversation = conversations.get_or_create(user, get_only=True)
         if not conversation:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
 

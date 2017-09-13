@@ -181,6 +181,7 @@ def create_labels_handler(app):
         new_labels = get_labels(update)
         if not new_labels:
             bot.send_message(chat_id, Message.Error.LABEL_MISSING.value)
+            conversation.rollback_state()
             return
 
         conversation.labels = new_labels
@@ -263,22 +264,23 @@ def handle_callback_for_labels(app, bot, update):
             return
 
         added = conversation.get_future_result()
-        if added:
-            try:
-                conversation.change_state(
-                    conversations.Conversation.State.IDLE)
-            except ValueError as e:
-                # TODO Log error
-                state, = e.args
-                bot.send_message(chat_id, Message.Error.UNKNOWN.value)
-                return
-
-            bot.send_message(chat_id, Message.Other.SUCCESS.value)
-            models.database.session.commit()
-        else:
+        if not added:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            conversation.rollback_state()
+            return
+
+        bot.send_message(chat_id, Message.Other.SUCCESS.value)
+        models.database.session.commit()
+
+        try:
+            conversation.change_state(conversations.Conversation.State.IDLE)
+        except ValueError as e:
+            # TODO Log error
+            state, = e.args
+            return
 
     elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
+        # TODO Rollback state after pending conversation state is introduced
         conversation.labels = None
         bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
 

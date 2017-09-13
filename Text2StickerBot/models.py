@@ -215,13 +215,19 @@ class Association(database.Model, ModelMixin):
         return query.count() > 0
 
     @classmethod
-    def query_get_sticker_ids(cls, user_id, labels):
+    def query_get_sticker_ids(cls, user_id, labels, unique=False):
         label_ids = Label.get_ids(labels)
         select_sticker_ids = cls.query.with_entities(cls.sticker_id)
         any_labels = cls.label_id.in_(label_ids)
-        return select_sticker_ids.filter_by(user_id=user_id).filter(any_labels)
+        query = select_sticker_ids.filter_by(user_id=user_id).filter(
+            any_labels)
+
+        if unique:
+            query = query.distinct()
+
+        return query
 
     @classmethod
-    def get_sticker_ids(cls, user_id, labels):
-        sticker_ids = cls.query_get_sticker_ids(user_id, labels).all()
+    def get_sticker_ids(cls, user_id, labels, unique=False):
+        sticker_ids = cls.query_get_sticker_ids(user_id, labels, unique).all()
         return [sticker_id for sticker_id, in sticker_ids]

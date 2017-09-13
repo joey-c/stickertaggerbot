@@ -313,7 +313,8 @@ def create_inline_query_handler(app):
             return
 
         with app.app_context():
-            stickers = models.Association.get_sticker_ids(user_id, labels)
+            stickers = models.Association.get_sticker_ids(
+                user_id, labels, unique=True)
 
         if not stickers:
             query.answer(is_personal=True,

@@ -88,7 +88,7 @@ class Conversation(object):
     def change_state(self, new_state, future=None, force=False):
         if force:
             self.__change_state(new_state, future)
-            return True
+            return
 
         # Block until previous state's action is complete
         elif self._future:
@@ -105,16 +105,13 @@ class Conversation(object):
             elif new_state == Conversation.State.CONFIRMED:
                 assert self.state == Conversation.State.LABEL
         except AssertionError:
-            raise ValueError("Cannot transit to " + new_state.name +
-                             " from " + self.state.name)
+            raise ValueError(self.state)
 
         logger = logging.getLogger("conversation." + str(self.user.id))
         logger.debug("Transiting from " + str(self.state) +
                      " to " + str(new_state))
 
         self.__change_state(new_state, future)
-
-        return True
 
     def update_future(self, new_future, force=False):
         if force:

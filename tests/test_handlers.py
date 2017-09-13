@@ -84,11 +84,12 @@ class TestStickerHandler(object):
             handlers.Message.Instruction.LABEL.value)
 
     def test_interrupted_conversation(self, update, conversation):
-        conversation.is_idle = mock.Mock(autospec=True, return_value=False)
+        conversation.change_state = mock.Mock(
+            autospec=True, side_effect=ValueError(States.IDLE))
 
         run_handler(handlers.create_sticker_handler, update)
 
-        assert conversation.change_state.call_args is None
+        conversation.change_state.assert_called_once()
         assert conversation.rollback_state.call_args is None
         bot.send_message.assert_called_once_with(
             update.effective_chat.id,
@@ -140,7 +141,7 @@ class TestLabelsHandler(object):
 
     def test_interrupted_conversation(self, conversation):
         conversation.change_state = mock.Mock(
-            autospec=True, side_effect=ValueError)
+            autospec=True, side_effect=ValueError(States.IDLE))
         update = telegram_factories.MessageUpdateFactory(
             message__from_user=conversation.user)
         chat_id = update.effective_chat.id

@@ -118,18 +118,17 @@ def create_sticker_handler(app):
         conversation = conversations.get_or_create(user,
                                                    chat=update.effective_chat)
 
-        with conversation.lock:
-            changed = False
-            if conversation.is_idle():
-                changed = conversation.change_state(
+        try:
+            with conversation.lock:
+                conversation.change_state(
                     conversations.Conversation.State.STICKER,
                     pool.submit(sticker_is_new, app, user, sticker))
-
-            if not changed:
-                # TODO Ask user if they want to cancel previous conversation
-                logger.debug("Conversation is not idle")
-                bot.send_message(chat_id, Message.Error.RESTART.value)
-                return
+        except ValueError as e:
+            # TODO Ask user if they want to cancel previous conversation
+            # TODO Log error
+            state, = e.args
+            bot.send_message(chat_id, Message.Error.RESTART.value)
+            return
 
         new_sticker = conversation.get_future_result()
 
@@ -172,14 +171,12 @@ def create_labels_handler(app):
 
         try:
             with conversation.lock:
-                changed = conversation.change_state(
+                conversation.change_state(
                     conversations.Conversation.State.LABEL)
-        except ValueError:  # State transition error
+        except ValueError as e:
+            # TODO Log error
+            state, = e.args
             bot.send_message(chat_id, Message.Error.RESTART.value)
-            return
-
-        if not changed:
-            bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             return
 
         sticker = conversation.sticker
@@ -248,11 +245,18 @@ def create_callback_handler(app):
 
         if callback_data.state == conversations.Conversation.State.LABEL:
             if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
-                with conversation.lock:
-                    successful = conversation.change_state(
-                        conversations.Conversation.State.CONFIRMED,
-                        pool.submit(
-                            add_sticker, app, bot, update, conversation))
+                try:
+                    with conversation.lock:
+                        conversation.change_state(
+                            conversations.Conversation.State.CONFIRMED,
+                            pool.submit(
+                                add_sticker, app, bot, update, conversation))
+                except ValueError as e:
+                    # TODO Log error
+                    state, = e.args
+                    bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+
+                successful = conversation.get_future_result()
                 if successful:
                     bot.send_message(chat_id, Message.Other.SUCCESS.value)
             elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
@@ -279,17 +283,13 @@ def add_sticker(app, bot, update, conversation):
                 # TODO Work with existing labels
                 association = models.Association(
                     database_user, database_sticker, database_label)
+
         except Exception as e:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             models.database.session.rollback()
             with conversation.lock:
                 conversation.rollback_state()
             return False
-        else:
-            with conversation.lock:
-                conversation.change_state(
-                    conversations.Conversation.State.IDLE)
-            models.database.session.commit()
 
     return True
 

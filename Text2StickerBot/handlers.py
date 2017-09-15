@@ -255,22 +255,20 @@ def handle_callback_for_labels(app, bot, update):
     if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
         try:
             conversation.change_state(
-                conversations.Conversation.State.CONFIRMED,
-                pool.submit(add_sticker, app, bot, update, conversation))
+                conversations.Conversation.State.CONFIRMED)
         except ValueError as e:
             # TODO Log error
             state, = e.args
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             return
 
-        added = conversation.get_future_result()
+        added = add_sticker(app, bot, update, conversation)
         if not added:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             conversation.rollback_state()
             return
 
         bot.send_message(chat_id, Message.Other.SUCCESS.value)
-        models.database.session.commit()
 
         try:
             conversation.change_state(conversations.Conversation.State.IDLE)
@@ -302,6 +300,7 @@ def add_sticker(app, bot, update, conversation):
                 association = models.Association(
                     database_user, database_sticker, database_label)
 
+            models.database.session.commit()
         except Exception as e:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             models.database.session.rollback()

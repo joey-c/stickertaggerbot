@@ -146,3 +146,5 @@ class TestRetrieval(object):
             sticker_ids = models.Association.get_sticker_ids(
                 users[1].id, label_texts[1:])
             assert sticker_ids == [raw_sticker_ids[0]]
+
+            clear_all_tables()

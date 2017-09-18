@@ -3,9 +3,9 @@ import pytest
 from unittest import mock
 
 from Text2StickerBot import tokens, models, conversations, handlers
-from Text2StickerBot.application import application as app
 
 from tests import telegram_factories
+from tests.misc import app_for_testing as app
 
 app_client = app.test_client()
 route = "/" + tokens.TELEGRAM

@@ -1,6 +1,16 @@
-from Text2StickerBot import flask_app, models
+import flask
+import telegram
+
+from Text2StickerBot import flask_app, models, tokens
 
 app_for_testing = flask_app.Application(testing=True)
+
+@app_for_testing.route("/" + tokens.TELEGRAM, methods=['POST'])
+def route_update():
+    update_json = flask.request.get_json()
+    update = telegram.Update.de_json(update_json, app_for_testing.bot)
+    app_for_testing.update_queue.put(update)
+    return ""
 
 tables = [models.User,
           models.Sticker,

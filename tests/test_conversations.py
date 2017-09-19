@@ -10,11 +10,6 @@ States = conversations.Conversation.State
 
 
 @pytest.fixture()
-def user():
-    return telegram_factories.UserFactory()
-
-
-@pytest.fixture()
 def incomplete_future():
     future = concurrent.futures.Future()
 
@@ -43,8 +38,8 @@ def blocking_future():
 
 
 @pytest.fixture()
-def conversation(user):
-    return conversations.Conversation(user,
+def conversation():
+    return conversations.Conversation(telegram_factories.UserFactory(),
                                       telegram_factories.ChatFactory())
 
 
@@ -198,19 +193,18 @@ class TestGetFutureResult(object):
 
 
 class TestGetOrCreate(object):
-    def test_get(self, user):
-        conversation = conversations.Conversation(
-            user, chat=telegram_factories.ChatFactory())
-        conversations.all[user.id] = conversation
+    def test_get(self, conversation):
+        conversations.all[conversation.user.id] = conversation
 
         retrieved_conversation = conversations.get_or_create(
-            user, get_only=True)
+            conversation.user, get_only=True)
         assert retrieved_conversation == conversation
 
-    def test_create(self, user):
+    def test_create(self):
         original_size = len(conversations.all)
         conversation = conversations.get_or_create(
-            user, chat=telegram_factories.ChatFactory())
+            telegram_factories.UserFactory(),
+            chat=telegram_factories.ChatFactory())
         current_size = len(conversations.all)
 
         assert current_size == original_size + 1

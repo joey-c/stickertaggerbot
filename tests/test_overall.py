@@ -26,23 +26,34 @@ class TestNormalUsage(object):
     sticker = telegram_factories.StickerFactory()
     labels = ["label1", "label2", "label3"]
 
-    @pytest.fixture(autouse=True)
+    @pytest.yield_fixture(autouse=True)
     def patch_telegram(self):
-        app.bot.send_message = mock.MagicMock()
-        app.bot.answer_inline_query = mock.MagicMock()
-        app.bot.send_sticker = mock.MagicMock()
+        patches = []
+        patches.append(mock.patch.object(app.bot, "send_message"))
+        patches.append(mock.patch.object(app.bot, "answer_inline_query"))
+        patches.append(mock.patch.object(app.bot, "send_sticker"))
+
+        for patch in patches:
+            patch.start()
+        yield
+        for patch in patches:
+            patch.stop()
 
     def test_start(self):
+        with app.app_context():
+            existing_users = models.User.query.all()
+        assert len(existing_users) == 0
+
         update = telegram_factories.CommandUpdateFactory(
             command="/start",
             message__from_user=self.user,
             message__chat=self.chat)
+
         response = post(update)
         time.sleep(2)
 
         with app.app_context():
-            database_user = models.User.get(
-                update.effective_user.id)
+            database_user = models.User.get(update.effective_user.id)
 
         assert database_user is not None
 

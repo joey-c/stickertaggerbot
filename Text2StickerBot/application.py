@@ -13,7 +13,7 @@ logging.basicConfig(filename=os.environ["LOG_LOCATION"],
                     datefmt='%d/%m/%Y %I:%M:%S %p')
 
 application = flask_app.Application()
-
+application.config["SQLALCHEMY_DATABASE_URI"] = config.DATABASE_URI
 
 @application.route("/" + config.TELEGRAM_TOKEN, methods=['POST'])
 def route_update():

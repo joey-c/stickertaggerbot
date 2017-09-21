@@ -3,7 +3,7 @@ import concurrent.futures
 import pytest
 from unittest import mock
 
-from Text2StickerBot import conversations
+from Text2StickerBot import conversations, config
 from tests import telegram_factories
 
 States = conversations.Conversation.State
@@ -26,7 +26,7 @@ def completed_future():
     return future
 
 
-pool = concurrent.futures.ThreadPoolExecutor()
+pool = concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_WORKERS)
 
 
 @pytest.fixture()

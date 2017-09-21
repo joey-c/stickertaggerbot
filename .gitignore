@@ -103,3 +103,8 @@ ENV/
 /site
 
 # End of https://www.gitignore.io/api/python
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

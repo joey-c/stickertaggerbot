@@ -5,7 +5,7 @@ import flask
 import telegram
 import telegram.ext
 
-from Text2StickerBot import tokens, handlers, models
+from Text2StickerBot import config, handlers, models
 
 
 class Application(flask.Flask):
@@ -22,7 +22,7 @@ class Application(flask.Flask):
         self.setup_database()
 
     def setup_telegram(self):
-        self.bot = telegram.Bot(token=tokens.TELEGRAM)
+        self.bot = telegram.Bot(token=config.TELEGRAM_TOKEN)
         self.update_queue = queue.Queue()
         self.dispatcher = telegram.ext.Dispatcher(self.bot, self.update_queue)
         handlers.register_handlers(self.dispatcher, self)

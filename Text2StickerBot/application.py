@@ -4,7 +4,7 @@ import os
 import flask
 import telegram
 
-from Text2StickerBot import tokens, flask_app
+from Text2StickerBot import config, flask_app
 
 logging.basicConfig(filename=os.environ["LOG_LOCATION"],
                     level=logging.DEBUG,
@@ -15,7 +15,7 @@ logging.basicConfig(filename=os.environ["LOG_LOCATION"],
 application = flask_app.Application()
 
 
-@application.route("/" + tokens.TELEGRAM, methods=['POST'])
+@application.route("/" + config.TELEGRAM_TOKEN, methods=['POST'])
 def route_update():
     update_json = flask.request.get_json()
     update = telegram.Update.de_json(update_json, application.bot)

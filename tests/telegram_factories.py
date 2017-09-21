@@ -3,14 +3,14 @@ import datetime
 import factory
 import telegram
 
-from Text2StickerBot import tokens
+from Text2StickerBot import config
 
 
 class BotFactory(factory.Factory):
     class Meta:
         model = telegram.Bot
 
-    token = tokens.TELEGRAM
+    token = config.TELEGRAM_TOKEN
 
 
 class UserFactory(factory.Factory):

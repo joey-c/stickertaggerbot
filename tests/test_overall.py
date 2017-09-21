@@ -2,13 +2,13 @@ import time
 import pytest
 from unittest import mock
 
-from Text2StickerBot import tokens, models, conversations, handlers
+from Text2StickerBot import config, models, conversations, handlers
 
 from tests import telegram_factories
 from tests.misc import app_for_testing as app
 
 app_client = app.test_client()
-route = "/" + tokens.TELEGRAM
+route = "/" + config.TELEGRAM_TOKEN
 
 
 def post(update):

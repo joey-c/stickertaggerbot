@@ -1,3 +1,5 @@
 /*
 /*/
+!/.ebextensions/
+!requirements.txt
 !/Text2StickerBot/

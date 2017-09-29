@@ -1,11 +1,10 @@
 import concurrent.futures
-import logging
 from enum import Enum
 
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
-from Text2StickerBot import conversations, models, config
+from Text2StickerBot import conversations, models, config, loggers
 
 pool = concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_WORKERS)
 
@@ -78,19 +77,25 @@ class StickerResult(telegram.InlineQueryResultCachedSticker):
 def create_command_start_handler(app):
     @run_async
     def command_start_handler(bot, update):
-        logger = logging.getLogger("handler.start")
-        logger.debug("Handling start")
+        logger = loggers.HANDLER_START
+        log_prefix = loggers.update_prefix(update)
+        loggers.logger_start(logger, update.update_id)
+
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
 
         with app.app_context():
-            user = models.User.get(update.effective_user.id)
+            user = models.User.get(user_id)
             if not user:
-                chat_id = update.effective_chat.id
+                logger.debug(
+                    log_prefix + "User " + str(user_id) + " not found")
                 user = models.User.from_telegram_user(update.effective_user,
                                                       chat_id)
-            models.database.session.commit()
-            bot.send_message(user.chat_id, Message.Instruction.START.value)
+                models.database.session.commit()
+                logger.debug(log_prefix + "Created user " + str(user_id))
 
-        logger.debug("Sent instructions")
+        bot.send_message(chat_id, Message.Instruction.START.value)
+        loggers.log_sent_message(logger, log_prefix, Message.Instruction.START)
 
     return command_start_handler
 
@@ -108,8 +113,9 @@ def sticker_is_new(app, user, sticker):
 def create_sticker_handler(app):
     @run_async
     def sticker_handler(bot, update):
-        logger = logging.getLogger("handler.sticker")
-        logger.debug("Handling sticker")
+        logger = loggers.HANDLER_STICKER
+        log_prefix = loggers.update_prefix(update)
+        loggers.logger_start(logger, update.update_id)
 
         user = update.effective_user
         sticker = update.effective_message.sticker
@@ -124,24 +130,34 @@ def create_sticker_handler(app):
                 pool.submit(sticker_is_new, app, user, sticker))
         except ValueError as e:
             # TODO Ask user if they want to cancel previous conversation
-            # TODO Log error
             state, = e.args
+            loggers.log_failed_to_change_conversation_state(
+                logger, log_prefix, state,
+                conversations.Conversation.State.STICKER)
+
             bot.send_message(chat_id, Message.Error.RESTART.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.RESTART)
             return
 
+        logger.debug(log_prefix + "Entered STICKER state")
         new_sticker = conversation.get_future_result()
 
         if new_sticker:
             bot.send_message(chat_id, Message.Instruction.LABEL.value)
+            loggers.log_sent_message(logger, log_prefix,
+                                     Message.Instruction.LABEL)
             conversation.sticker = sticker
         elif new_sticker is False:
-            logger.debug("Sticker exists")
+            logger.debug(log_prefix + "Sticker exists")
             bot.send_message(chat_id, Message.Error.STICKER_EXISTS.value)
+            loggers.log_sent_message(logger, log_prefix,
+                                     Message.Error.STICKER_EXISTS)
             # TODO Ask user if they meant to change the sticker's labels
             conversation.rollback_state()
         else:
-            logger.debug("Future timed out")
+            logger.debug(log_prefix + "Future timed out")
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
             conversation.rollback_state()
 
     return sticker_handler
@@ -156,31 +172,45 @@ def get_labels(update):
 def create_labels_handler(app):
     @run_async
     def labels_handler(bot, update):
-        logger = logging.getLogger("handler.labels")
-        logger.debug("Handling labels")
+        logger = loggers.HANDLER_LABELS
+        log_prefix = loggers.update_prefix(update)
+        loggers.logger_start(logger, update.update_id)
 
         user = update.effective_user
         chat_id = update.effective_chat.id
 
         conversation = conversations.get_or_create(user, get_only=True)
         if not conversation:
+            loggers.log_conversation_not_found(logger, log_prefix, user.id)
             bot.send_message(chat_id, Message.Error.NOT_STARTED.value)
+            loggers.log_sent_message(logger, log_prefix,
+                                     Message.Error.NOT_STARTED)
             return
 
         try:
             conversation.change_state(
                 conversations.Conversation.State.LABEL)
         except ValueError as e:
-            # TODO Log error
             state, = e.args
+            loggers.log_failed_to_change_conversation_state(
+                logger, log_prefix, state,
+                conversations.Conversation.State.LABEL)
+
             bot.send_message(chat_id, Message.Error.RESTART.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.RESTART)
             return
 
         sticker = conversation.sticker
 
         new_labels = get_labels(update)
         if not new_labels:
+            logger.debug(log_prefix + "No new labels found. Message: " +
+                         update.message.text)
+
             bot.send_message(chat_id, Message.Error.LABEL_MISSING.value)
+            loggers.log_sent_message(logger, log_prefix,
+                                     Message.Error.LABEL_MISSING)
+
             conversation.rollback_state()
             return
 
@@ -204,6 +234,7 @@ def create_labels_handler(app):
         bot.send_message(chat_id,
                          message_text,
                          reply_markup=inline_keyboard_markup)
+        logger.debug(log_prefix + "Sent sticker with confirmation message")
 
     return labels_handler
 
@@ -232,13 +263,19 @@ def generate_inline_keyboard_markup(callback_data_generator, button_texts):
 def create_callback_handler(app):
     @run_async
     def callback_handler(bot, update):
+        logger = loggers.HANDLER_CALLBACK_QUERY
+        log_prefix = loggers.update_prefix(update)
+        loggers.logger_start(logger, update.update_id)
+
         callback_data = CallbackData.unwrap(update.callback_query.data)
         user = update.effective_user
         chat_id = update.effective_chat.id
 
         conversation = conversations.get_or_create(user, get_only=True)
         if not conversation:
+            loggers.log_conversation_not_found(logger, log_prefix, user.id)
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
 
         if callback_data.state == conversations.Conversation.State.LABEL:
             handle_callback_for_labels(app, bot, update)
@@ -247,43 +284,69 @@ def create_callback_handler(app):
 
 
 def handle_callback_for_labels(app, bot, update):
+    logger = loggers.HANDLER_CALLBACK_QUERY_LABELS
+    log_prefix = loggers.update_prefix(update)
+    loggers.logger_start(logger, update.update_id)
+
     callback_data = CallbackData.unwrap(update.callback_query.data)
     chat_id = update.effective_chat.id
     conversation = conversations.get_or_create(
         update.effective_user, get_only=True)
 
+    if not conversation:
+        loggers.log_conversation_not_found(
+            logger, log_prefix, update.effective_user.id)
+        bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+        loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
+        return
+
     if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
+        logger.debug(log_prefix + "Button – confirm")
         try:
             conversation.change_state(
                 conversations.Conversation.State.CONFIRMED)
         except ValueError as e:
-            # TODO Log error
             state, = e.args
+            loggers.log_failed_to_change_conversation_state(
+                logger, log_prefix, state,
+                conversations.Conversation.State.CONFIRMED)
+
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
             return
 
         added = add_sticker(app, bot, update, conversation)
         if not added:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
             conversation.rollback_state()
             return
 
         bot.send_message(chat_id, Message.Other.SUCCESS.value)
+        loggers.log_sent_message(logger, log_prefix, Message.Other.SUCCESS)
 
         try:
             conversation.change_state(conversations.Conversation.State.IDLE)
         except ValueError as e:
-            # TODO Log error
             state, = e.args
+            loggers.log_failed_to_change_conversation_state(
+                logger, log_prefix, state,
+                conversations.Conversation.State.IDLE)
+
             return
 
     elif callback_data.button_text == CallbackData.ButtonText.CANCEL:
         # TODO Rollback state after pending conversation state is introduced
         conversation.labels = None
         bot.send_message(chat_id, Message.Instruction.RE_LABEL.value)
+        loggers.log_sent_message(logger, log_prefix,
+                                 Message.Instruction.RE_LABEL)
 
 
 def add_sticker(app, bot, update, conversation):
+    logger = loggers.DATABASE_ADD_STICKER
+    log_prefix = loggers.update_prefix(update)
+
     user = update.effective_user
     chat_id = update.effective_chat.id
     sticker = conversation.sticker
@@ -303,6 +366,8 @@ def add_sticker(app, bot, update, conversation):
             models.database.session.commit()
         except Exception as e:
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
+            loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
+
             models.database.session.rollback()
             conversation.rollback_state()
             return False

@@ -7,12 +7,13 @@ from Text2StickerBot import config, models, conversations, handlers
 from tests import telegram_factories
 from tests.misc import app_for_testing as app
 
-app_client = app.test_client()
+
 route = "/" + config.TELEGRAM_TOKEN
 
 
 def post(update):
-    return app_client.post(route,
+    with app.test_client() as app_client:
+        return app_client.post(route,
                            data=update.to_json(),
                            content_type="application/json")
 

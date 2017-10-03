@@ -29,10 +29,8 @@ class ModelMixin(object):
 
     @classmethod
     def id_exists(cls, class_id):
-        subquery = cls.query.filter_by(id=class_id)
-        boolean = database.session.query(literal(True))
-        result = boolean.filter(subquery.exists()).scalar()  # True or None
-        return result == True
+        query = cls.query.filter_by(id=class_id)
+        return query.count() > 0
 
     # Returns number of records where field_string == value, or
     # returns number of records

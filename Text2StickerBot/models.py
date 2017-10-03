@@ -180,7 +180,7 @@ class Association(database.Model, ModelMixin):
     user_id = database.Column(database.Integer,
                               database.ForeignKey("user.id"))
 
-    sticker_id = database.Column(database.Integer,
+    sticker_id = database.Column(database.String(MAX_STRING_SIZE),
                                  database.ForeignKey("sticker.id"))
 
     label_id = database.Column(database.Integer,

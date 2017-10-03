@@ -9,17 +9,27 @@ from Text2StickerBot import config, handlers, models
 
 
 class Application(flask.Flask):
-    def __init__(self, testing=False):
+    def __init__(self, config=None, testing=False):
         super().__init__(__name__)
+        self.apply_config(config)
+        self.testing = testing
         self.debug = True
+
         self.bot = None
         self.update_queue = None
         self.dispatcher = None
         self.dispatcher_thread = None
         self.setup_telegram()
+
         self.database = None
-        self.testing = testing
         self.setup_database()
+
+    def apply_config(self, config):
+        if not config:
+            return
+        
+        for key, value in config.items():
+            self.config[key] = value
 
     def setup_telegram(self):
         self.bot = telegram.Bot(token=config.TELEGRAM_TOKEN)

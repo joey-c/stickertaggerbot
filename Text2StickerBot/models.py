@@ -186,6 +186,8 @@ class Association(database.Model, ModelMixin):
     label_id = database.Column(database.Integer,
                                database.ForeignKey("label.id"))
 
+    uses = database.Column(database.Integer)
+
     __table_args__ = (database.UniqueConstraint("user_id",
                                                 "sticker_id",
                                                 "label_id"),)
@@ -200,12 +202,14 @@ class Association(database.Model, ModelMixin):
         self.user_id = user.id
         self.sticker_id = sticker.id
         self.label_id = label.id
+        self.uses = 0
         self.add_to_database()
 
     def __str__(self):
         return "User: " + str(self.user_id) + \
                ", Sticker: " + str(self.sticker_id) + \
-               ", Label: " + str(self.label_id)
+               ", Label: " + str(self.label_id) + \
+               ", Uses: " + str(self.uses)
 
     @classmethod
     def exists(cls, user, sticker, label):

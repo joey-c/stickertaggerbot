@@ -3,11 +3,11 @@ import telegram
 
 from Text2StickerBot import config, flask_app, loggers
 
+app_config = {"SQLALCHEMY_DATABASE_URI": config.DATABASE_URI,
+              "SQLALCHEMY_TRACK_MODIFICATIONS": False}
 
+application = flask_app.Application(app_config)
 
-application = flask_app.Application()
-application.config["SQLALCHEMY_DATABASE_URI"] = config.DATABASE_URI
-application.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 @application.route("/" + config.TELEGRAM_TOKEN, methods=['POST'])
 def route_update():

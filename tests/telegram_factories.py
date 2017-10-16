@@ -3,7 +3,7 @@ import datetime
 import factory
 import telegram
 
-from Text2StickerBot import config
+from stickertaggerbot import config
 
 
 class BotFactory(factory.Factory):

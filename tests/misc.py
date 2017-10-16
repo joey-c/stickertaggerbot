@@ -1,7 +1,7 @@
 import flask
 import telegram
 
-from Text2StickerBot import flask_app, models, config
+from stickertaggerbot import flask_app, models, config
 
 app_for_testing = flask_app.Application(testing=True)
 

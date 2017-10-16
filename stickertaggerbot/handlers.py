@@ -4,7 +4,7 @@ from enum import Enum
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
-from Text2StickerBot import conversations, models, config, loggers
+from stickertaggerbot import conversations, models, config, loggers
 
 pool = concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_WORKERS)
 

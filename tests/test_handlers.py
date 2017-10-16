@@ -2,7 +2,7 @@ import time
 import pytest
 from unittest import mock
 
-from Text2StickerBot import handlers, conversations
+from stickertaggerbot import handlers, conversations
 
 from tests import telegram_factories
 from tests.misc import app_for_testing, clear_all_tables
@@ -12,7 +12,7 @@ States = conversations.Conversation.State
 
 
 # Returns a new mock Conversation instance
-@mock.patch("Text2StickerBot.handlers.conversations.Conversation")
+@mock.patch("stickertaggerbot.handlers.conversations.Conversation")
 @pytest.fixture()
 def conversation(Conversation):
     user = telegram_factories.UserFactory()
@@ -26,7 +26,7 @@ def conversation(Conversation):
 
 # Use with mock.patch
 def get_or_create(conversation):
-    args = ("Text2StickerBot.conversations.get_or_create",
+    args = ("stickertaggerbot.conversations.get_or_create",
             mock.MagicMock(autospec=True, return_value=conversation))
     return args
 
@@ -38,11 +38,11 @@ def run_handler(handler_creator, update):
 
 class TestStartCommandHandler(object):
     @mock.patch.object(bot, "send_message", mock.MagicMock(autospec=True))
-    @mock.patch("Text2StickerBot.handlers.models.User.add_to_database",
+    @mock.patch("stickertaggerbot.handlers.models.User.add_to_database",
                 mock.MagicMock(autospec=True))
-    @mock.patch("Text2StickerBot.handlers.models.database.session.commit",
+    @mock.patch("stickertaggerbot.handlers.models.database.session.commit",
                 mock.MagicMock(autospec=True))
-    @mock.patch("Text2StickerBot.handlers.models.User.get",
+    @mock.patch("stickertaggerbot.handlers.models.User.get",
                 mock.MagicMock(autospec=True, return_value=None))
     def test_new_user(self):
         update = telegram_factories.CommandUpdateFactory(
@@ -78,7 +78,7 @@ class TestStickerHandler(object):
 
         return maker
 
-    @mock.patch("Text2StickerBot.handlers.sticker_is_new",
+    @mock.patch("stickertaggerbot.handlers.sticker_is_new",
                 mock.MagicMock(autospec=True, return_value=True))
     def test_new_sticker(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -232,7 +232,7 @@ class TestCallbackQueryHandlerInLabelState(object):
         patches = []
         patches.append(mock.patch.object(bot, "send_message"))
         patches.append(mock.patch(
-            "Text2StickerBot.handlers.models.database.session.commit"))
+            "stickertaggerbot.handlers.models.database.session.commit"))
         for patch in patches:
             patch.start()
         yield
@@ -259,7 +259,7 @@ class TestCallbackQueryHandlerInLabelState(object):
 
         return update_maker
 
-    @mock.patch("Text2StickerBot.handlers.models.Association.exists",
+    @mock.patch("stickertaggerbot.handlers.models.Association.exists",
                 mock.MagicMock(return_value=False))
     def test_confirm(self, conversation, sticker, callback_query_update):
         conversation.sticker = sticker
@@ -269,13 +269,13 @@ class TestCallbackQueryHandlerInLabelState(object):
         update = callback_query_update(
             conversation, handlers.CallbackData.ButtonText.CONFIRM)
 
-        with mock.patch("Text2StickerBot.handlers.models.User.id_exists",
+        with mock.patch("stickertaggerbot.handlers.models.User.id_exists",
                         mock.MagicMock(return_value=False)), \
              app_for_testing.app_context():
             database_user = handlers.models.User.from_telegram_user(
                 conversation.user, conversation.chat.id)
 
-        with mock.patch("Text2StickerBot.handlers.models.User.get",
+        with mock.patch("stickertaggerbot.handlers.models.User.get",
                         mock.MagicMock(autospec=True,
                                        return_value=database_user)), \
              mock.patch(*get_or_create(conversation)):
@@ -322,7 +322,7 @@ class TestInlineQueryHandler(object):
                                          return_value=filter_return)
         with app_for_testing.app_context():
             patch = mock.patch(
-                "Text2StickerBot.handlers.models.Association.query", query)
+                "stickertaggerbot.handlers.models.Association.query", query)
             patch.start()
 
         yield
@@ -346,7 +346,7 @@ class TestInlineQueryHandler(object):
             is_personal=True,
             switch_pm_text=handlers.Message.Error.NOT_STARTED.value)
 
-    @mock.patch("Text2StickerBot.handlers.models.Association.get_sticker_ids",
+    @mock.patch("stickertaggerbot.handlers.models.Association.get_sticker_ids",
                 mock.MagicMock(autospec=True, return_value=[]))
     def test_no_stickers(self):
         self.set_user_association(1)
@@ -373,9 +373,9 @@ class TestInlineQueryHandler(object):
         sticker_result = handlers.StickerResult(sticker_id)
 
         with mock.patch(
-                "Text2StickerBot.handlers.models.Association.get_sticker_ids",
+                "stickertaggerbot.handlers.models.Association.get_sticker_ids",
                 mock.MagicMock(autospec=True, return_value=[sticker_id])), \
-             mock.patch("Text2StickerBot.handlers.StickerResult",
+             mock.patch("stickertaggerbot.handlers.StickerResult",
                         mock.MagicMock(return_value=sticker_result)):
             run_handler(handlers.create_inline_query_handler, update)
 

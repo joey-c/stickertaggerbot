@@ -1,7 +1,7 @@
 import flask
 import telegram
 
-from Text2StickerBot import config, flask_app, loggers
+from stickertaggerbot import config, flask_app, loggers
 
 app_config = {"SQLALCHEMY_DATABASE_URI": config.DATABASE_URI,
               "SQLALCHEMY_TRACK_MODIFICATIONS": False}

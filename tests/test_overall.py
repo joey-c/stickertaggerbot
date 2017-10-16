@@ -2,7 +2,7 @@ import time
 import pytest
 from unittest import mock
 
-from Text2StickerBot import config, models, conversations, handlers
+from stickertaggerbot import config, models, conversations, handlers
 
 from tests import telegram_factories
 from tests.misc import app_for_testing as app

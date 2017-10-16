@@ -1,7 +1,7 @@
 import pytest
 from sqlite3 import IntegrityError
 
-from Text2StickerBot import models
+from stickertaggerbot import models
 from tests import telegram_factories
 from tests.misc import clear_all_tables, app_for_testing
 

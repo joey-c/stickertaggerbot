@@ -3,9 +3,9 @@ click==6.7
 dnspython==1.15.0
 email-validator==1.0.2
 factory-boy==2.9.2
-Faker==0.8.3
+Faker==0.8.6
 Flask==0.12.2
-Flask-SQLAlchemy==2.2
+Flask-SQLAlchemy==2.3.2
 future==0.16.0
 idna==2.6
 itsdangerous==0.24
@@ -13,9 +13,10 @@ Jinja2==2.9.6
 MarkupSafe==1.0
 psycopg2==2.7.3.1
 py==1.4.34
-pytest==3.2.2
+pytest==3.2.3
 python-dateutil==2.6.1
-python-telegram-bot==8.0
-six==1.10.0
+python-telegram-bot==8.1.1
+six==1.11.0
 SQLAlchemy==1.1.14
+text-unidecode==1.0
 Werkzeug==0.12.2

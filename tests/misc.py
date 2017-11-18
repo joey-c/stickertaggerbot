@@ -3,7 +3,10 @@ import telegram
 
 from stickertaggerbot import flask_app, models, config
 
-app_for_testing = flask_app.Application(testing=True)
+app_config = {"SQLALCHEMY_DATABASE_URI": config.DATABASE_URI,
+              "SQLALCHEMY_TRACK_MODIFICATIONS": False}
+
+app_for_testing = flask_app.Application(app_config, testing=True)
 
 
 @app_for_testing.route("/" + config.TELEGRAM_TOKEN, methods=['POST'])

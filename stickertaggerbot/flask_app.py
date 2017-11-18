@@ -9,7 +9,7 @@ from stickertaggerbot import config, handlers, models
 
 
 class Application(flask.Flask):
-    def __init__(self, config=None, testing=False):
+    def __init__(self, config=None, testing=False, sqlalchemy_logging=False):
         super().__init__(__name__)
         self.apply_config(config)
         self.testing = testing
@@ -22,7 +22,7 @@ class Application(flask.Flask):
         self.setup_telegram()
 
         self.database = None
-        self.setup_database()
+        self.setup_database(sqlalchemy_logging)
 
     def apply_config(self, config):
         if not config:
@@ -40,8 +40,9 @@ class Application(flask.Flask):
                                                   name="dispatcher")
         self.dispatcher_thread.start()
 
-    def setup_database(self):
+    def setup_database(self, sqlalchemy_logging):
         self.database = models.database
         self.database.init_app(self)
         with self.app_context():
             self.database.create_all()
+        models.sqlalchemy_logging(log=sqlalchemy_logging)

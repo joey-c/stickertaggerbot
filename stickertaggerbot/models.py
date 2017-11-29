@@ -233,3 +233,32 @@ class Association(database.Model, ModelMixin):
     def get_sticker_ids(cls, user_id, labels, unique=False):
         sticker_ids = cls.query_get_sticker_ids(user_id, labels, unique).all()
         return [sticker_id for sticker_id, in sticker_ids]
+
+    @classmethod
+    def increment_usage(cls, user_id, sticker_id, labels):
+        by_user_and_sticker = cls.query.filter_by(user_id=user_id,
+                                                  sticker_id=sticker_id)
+        label_ids = Label.query_get_ids(labels)
+        any_labels = cls.label_id.in_(label_ids)
+
+        associations = by_user_and_sticker.filter(any_labels)
+
+        associations.update({'uses': Association.uses + 1},
+                            synchronize_session='fetch')  # Hence not flushing
+
+    @classmethod
+    def get_usage_count(cls, sticker_id, label, user_id=None):
+        label_id, = Label.get_ids([label])
+
+        if user_id is None:
+            query = Association.query.filter_by(sticker_id=sticker_id,
+                                                label_id=label_id)
+            uses = query.with_entities(func.sum(Association.uses)).scalar()
+
+        else:
+            select_uses = Association.query.with_entities(Association.uses)
+            query = select_uses.filter_by(
+                user_id=user_id, sticker_id=sticker_id, label_id=label_id)
+            uses, = query.first()
+
+        return uses

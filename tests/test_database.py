@@ -205,3 +205,96 @@ class TestRetrieveStickerByLabel(object):
             unique=True)
         assert len(sticker_ids_unique) == 1
         assert sticker_ids_unique[0] == sticker_id
+
+
+@pytest.mark.incremental
+class TestAssociationUsage(object):
+    def test_get_usage_count(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            user = model_factories.UserFactory()
+            sticker = model_factories.StickerFactory()
+            label = model_factories.LabelFactory()
+            association = model_factories.AssociationFactory(
+                user=user, sticker=sticker, label=label)
+
+            usage = models.Association.get_usage_count(
+                sticker.id, label.text, user.id)
+            assert usage == 0
+
+            new_usage = 5
+            association.uses = new_usage
+            usage = models.Association.get_usage_count(
+                sticker.id, label.text, user.id)
+            assert usage == new_usage
+
+    def test_get_usage_count_across_users(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            sticker = model_factories.StickerFactory()
+            label = model_factories.LabelFactory()
+            associations = model_factories.AssociationFactory.build_batch(
+                3, sticker=sticker, label=label)
+
+            associations_unique = \
+                model_factories.AssociationFactory.build_batch(5)
+
+            for association in associations+associations_unique:
+                association.uses = 1
+            models.database.session.flush()
+
+            count = models.Association.get_usage_count(sticker.id, label.text)
+            assert count == len(associations)
+
+
+    def test_increment_usage(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            label = model_factories.LabelFactory()
+            association = model_factories.AssociationFactory(label=label)
+            assert association.uses == 0
+
+            models.Association.increment_usage(
+                association.user_id, association.sticker_id, [label.text])
+            assert association.uses == 1
+
+    def test_increment_same_users_same_stickers_different_labels(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            users = model_factories.UserFactory.build_batch(2)
+            stickers = model_factories.StickerFactory.build_batch(2)
+            labels = model_factories.LabelFactory.build_batch(2)
+
+            # user, sticker, label
+            association_groups = [(0, 0, 0),
+                                  (1, 0, 0),
+                                  (0, 1, 0),
+                                  (0, 0, 1)]
+
+            associations = [model_factories.AssociationFactory(
+                user=users[u], sticker=stickers[s], label=labels[l])
+                for u, s, l in association_groups]
+
+            relevant_indices = [0, 3]
+            relevant_association_groups = [association_groups[i]
+                                           for i in relevant_indices]
+
+            current_uses = [models.Association.get_usage_count(
+                stickers[s].id, labels[l].text, users[u].id)
+                for u, s, l in relevant_association_groups]
+
+            relevant_labels = [label.text for label in labels[:2]]
+            models.Association.increment_usage(
+                users[0].id, stickers[0].id, relevant_labels)
+
+            new_uses = [models.Association.get_usage_count(
+                stickers[s].id, labels[l].text, users[u].id)
+                for u, s, l in relevant_association_groups]
+
+            incremented_uses = [use + 1 for use in current_uses]
+
+            assert new_uses == incremented_uses

@@ -17,10 +17,10 @@ def route_update():
     return ""
 
 
-tables = [models.User,
+tables = [models.Association,
+          models.User,
           models.Sticker,
-          models.Label,
-          models.Association]
+          models.Label]
 
 
 def clear_all_tables():

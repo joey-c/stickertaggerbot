@@ -246,19 +246,26 @@ class Association(database.Model, ModelMixin):
         associations.update({'uses': Association.uses + 1},
                             synchronize_session='fetch')  # Hence not flushing
 
+    # Fails silently if no such association exists
     @classmethod
     def get_usage_count(cls, sticker_id, label, user_id=None):
-        label_id, = Label.get_ids([label])
+        uses = 0
+
+        label_id = Label.get_ids([label])
+        if not label_id:
+            return uses
+        label_id, = label_id
 
         if user_id is None:
             query = Association.query.filter_by(sticker_id=sticker_id,
                                                 label_id=label_id)
             uses = query.with_entities(func.sum(Association.uses)).scalar()
-
         else:
             select_uses = Association.query.with_entities(Association.uses)
             query = select_uses.filter_by(
                 user_id=user_id, sticker_id=sticker_id, label_id=label_id)
-            uses, = query.first()
+            result = query.first()
+            if result:
+                uses, = result
 
         return uses

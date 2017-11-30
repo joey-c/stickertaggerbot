@@ -229,6 +229,38 @@ class TestAssociationUsage(object):
                 sticker.id, label.text, user.id)
             assert usage == new_usage
 
+    def test_get_usage_count_for_nonexistent_association(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            nonexistent_sticker_id = "0"
+            nonexistent_label = "label"
+            nonexistent_user_id = 0
+
+            nonexistent_without_user_id = models.Association.get_usage_count(
+                nonexistent_sticker_id, nonexistent_label)
+            assert nonexistent_without_user_id == 0
+
+            nonexistent_with_user_id = models.Association.get_usage_count(
+                nonexistent_sticker_id, nonexistent_label, nonexistent_user_id)
+            assert nonexistent_with_user_id == 0
+
+            valid_label = model_factories.LabelFactory().text
+            valid_sticker_id = model_factories.StickerFactory().id
+            valid_user_id = model_factories.UserFactory().id
+
+            nonexistent_sticker_count = models.Association.get_usage_count(
+                nonexistent_sticker_id, valid_label, valid_user_id)
+            assert nonexistent_sticker_count == 0
+
+            nonexistent_label_count = models.Association.get_usage_count(
+                valid_sticker_id, nonexistent_label, valid_user_id)
+            assert nonexistent_label_count == 0
+
+            nonexistent_user_count = models.Association.get_usage_count(
+                valid_sticker_id, valid_label, nonexistent_user_id)
+            assert nonexistent_user_count == 0
+
     def test_get_usage_count_across_users(self):
         with app_for_testing.app_context():
             clear_all_tables()
@@ -241,13 +273,12 @@ class TestAssociationUsage(object):
             associations_unique = \
                 model_factories.AssociationFactory.build_batch(5)
 
-            for association in associations+associations_unique:
+            for association in associations + associations_unique:
                 association.uses = 1
             models.database.session.flush()
 
             count = models.Association.get_usage_count(sticker.id, label.text)
             assert count == len(associations)
-
 
     def test_increment_usage(self):
         with app_for_testing.app_context():
@@ -260,6 +291,12 @@ class TestAssociationUsage(object):
             models.Association.increment_usage(
                 association.user_id, association.sticker_id, [label.text])
             assert association.uses == 1
+
+    def test_increment_usage_for_nonexistent_association(self):
+        with app_for_testing.app_context():
+            clear_all_tables()
+
+            models.Association.increment_usage(0, "0", ["label"])
 
     def test_increment_same_users_same_stickers_different_labels(self):
         with app_for_testing.app_context():

@@ -408,6 +408,31 @@ def create_inline_query_handler(app):
     return inline_query_handler
 
 
+# TODO: Consider adding soft labels – labels in the query that aren't yet
+#       associated with the sticker
+def create_chosen_inline_result_handler(app):
+    @run_async
+    def chosen_inline_result_handler(bot, update):
+        logger = loggers.HANDLER_CHOSEN_INLINE_RESULT
+        log_prefix = loggers.update_prefix(update)
+        loggers.logger_start(logger, update.update_id)
+
+        user = update.effective_user
+        chosen_inline_result = update.chosen_inline_result
+        sticker_id = StickerResult.unwrap(chosen_inline_result.result_id)
+        labels = chosen_inline_result.query.split()
+
+        logger.debug(log_prefix + "Query: " + chosen_inline_result.query)
+        logger.debug(log_prefix + "Labels: " + str(labels))
+
+        models.Association.increment_usage(user.id, sticker_id, labels)
+
+        logger.debug(log_prefix + "Incremented usage for user " + str(user.id) +
+                     "'s sticker " + str(sticker_id))
+
+    return chosen_inline_result_handler
+
+
 # TODO Handle unrecognized commands
 def register_handlers(dispatcher, app):
     dispatcher.add_handler(

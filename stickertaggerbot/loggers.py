@@ -16,6 +16,8 @@ HANDLER_CALLBACK_QUERY = logging.getLogger("handler.callback_query")
 HANDLER_CALLBACK_QUERY_LABELS = logging.getLogger(
     "handler.callback_query.labels")
 HANDLER_INLINE_QUERY = logging.getLogger("handler.inline_query")
+HANDLER_CHOSEN_INLINE_RESULT = logging.getLogger(
+    "handler.chosen_inline_result")
 
 DATABASE_ADD_STICKER = logging.getLogger("database.add_sticker")
 

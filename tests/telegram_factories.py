@@ -137,6 +137,16 @@ class InlineQueryFactory(factory.Factory):
     offset = ""
 
 
+class ChosenInlineResultFactory(factory.Factory):
+    class Meta:
+        model = telegram.ChosenInlineResult
+
+    # Required arguments
+    result_id = factory.Sequence(lambda n: "result_" + str(n))
+    from_user = factory.SubFactory(UserFactory)
+    query = "query"
+
+
 class UpdateFactory(factory.Factory):
     class Meta:
         model = telegram.Update
@@ -174,3 +184,7 @@ class InlineQueryUpdateFactory(UpdateFactory):
 
 class CallbackQueryUpdateFactory(UpdateFactory):
     callback_query = factory.SubFactory(CallbackQueryFactory)
+
+
+class ChosenInlineResultUpdateFactory(UpdateFactory):
+    chosen_inline_result = factory.SubFactory(ChosenInlineResultFactory)

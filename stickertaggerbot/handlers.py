@@ -276,6 +276,7 @@ def create_callback_handler(app):
             loggers.log_conversation_not_found(logger, log_prefix, user.id)
             bot.send_message(chat_id, Message.Error.UNKNOWN.value)
             loggers.log_sent_message(logger, log_prefix, Message.Error.UNKNOWN)
+            return
 
         if callback_data.state == conversations.Conversation.State.LABEL:
             handle_callback_for_labels(app, bot, update)

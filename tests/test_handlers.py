@@ -259,8 +259,6 @@ class TestCallbackQueryHandlerInLabelState(object):
 
         return update_maker
 
-    @mock.patch("stickertaggerbot.handlers.models.Association.exists",
-                mock.MagicMock(return_value=False))
     def test_confirm(self, conversation, sticker, callback_query_update):
         conversation.sticker = sticker
         conversation.labels = ["label1", "label2", "label3"]
@@ -275,10 +273,15 @@ class TestCallbackQueryHandlerInLabelState(object):
             database_user = handlers.models.User.from_telegram_user(
                 conversation.user, conversation.chat.id)
 
+        # TODO: Use a more elegant way to do this
         with mock.patch("stickertaggerbot.handlers.models.User.get",
                         mock.MagicMock(autospec=True,
                                        return_value=database_user)), \
-             mock.patch(*get_or_create(conversation)):
+             mock.patch(*get_or_create(conversation)), \
+             mock.patch("stickertaggerbot.handlers.models.Association",
+                        mock.MagicMock(autospec=True)), \
+             mock.patch("stickertaggerbot.handlers.models.database.session.commit",
+                        mock.MagicMock(autospec=True)):
             run_handler(handlers.create_callback_handler, update)
 
         time.sleep(2)
@@ -288,9 +291,6 @@ class TestCallbackQueryHandlerInLabelState(object):
 
         bot.send_message.assert_called_once_with(
             conversation.chat.id, handlers.Message.Other.SUCCESS.value)
-
-        assert handlers.models.Association.exists.call_count == len(
-            conversation.labels)
 
     def test_cancel(self, conversation, sticker, callback_query_update):
         conversation.sticker = sticker

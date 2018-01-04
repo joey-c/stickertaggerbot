@@ -2,110 +2,115 @@ import pytest
 from sqlite3 import IntegrityError
 
 from stickertaggerbot import models
-from tests import telegram_factories, model_factories
+from tests import model_factories
 from tests.misc import clear_all_tables, app_for_testing
 
 models.sqlalchemy_logging(True)
 
 
+# TODO: should there just be one app context per session?
+@pytest.fixture(scope="class", autouse=True)
+def app_context_per_test_class():
+    context = app_for_testing.app_context()
+    context.push()
+    yield
+    context.pop()
+
+
 class TestInsertion(object):
     def test_insertion_basic(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            user = model_factories.UserFactory()
-            sticker = model_factories.StickerFactory()
-            label = model_factories.LabelFactory()
-            association = model_factories.AssociationFactory(
-                user=user, sticker=sticker, label=label)
+        user = model_factories.UserFactory()
+        sticker = model_factories.StickerFactory()
+        label = model_factories.LabelFactory()
+        association = model_factories.AssociationFactory(
+            user=user, sticker=sticker, label=label)
 
-            assert models.User.id_exists(user.id)
-            assert models.User.count() == 1
+        assert models.User.id_exists(user.id)
+        assert models.User.count() == 1
 
-            assert models.Sticker.id_exists(sticker.id)
-            assert models.Sticker.count() == 1
+        assert models.Sticker.id_exists(sticker.id)
+        assert models.Sticker.count() == 1
 
-            assert models.Label.id_exists(label.id)
-            assert models.Label.count() == 1
+        assert models.Label.id_exists(label.id)
+        assert models.Label.count() == 1
 
-            assert models.Association.id_exists(association.id)
-            assert models.Association.count() == 1
+        assert models.Association.id_exists(association.id)
+        assert models.Association.count() == 1
 
     def test_insertion_overlapping(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            user = model_factories.UserFactory()
-            sticker = model_factories.StickerFactory()
-            label_a = model_factories.LabelFactory()
-            association_a = models.Association(
-                user=user, sticker=sticker, label=label_a)
+        user = model_factories.UserFactory()
+        sticker = model_factories.StickerFactory()
+        label_a = model_factories.LabelFactory()
+        association_a = models.Association(
+            user=user, sticker=sticker, label=label_a)
 
-            label_b = model_factories.LabelFactory()
-            association_b = models.Association(
-                user=user, sticker=sticker, label=label_b)
+        label_b = model_factories.LabelFactory()
+        association_b = models.Association(
+            user=user, sticker=sticker, label=label_b)
 
-            assert models.User.id_exists(user.id)
-            assert models.User.count() == 1
+        assert models.User.id_exists(user.id)
+        assert models.User.count() == 1
 
-            assert models.Sticker.id_exists(sticker.id)
-            assert models.Sticker.count() == 1
+        assert models.Sticker.id_exists(sticker.id)
+        assert models.Sticker.count() == 1
 
-            assert models.Label.id_exists(label_a.id)
-            assert models.Label.id_exists(label_b.id)
-            assert models.Label.count() == 2
+        assert models.Label.id_exists(label_a.id)
+        assert models.Label.id_exists(label_b.id)
+        assert models.Label.count() == 2
 
-            assert models.Association.id_exists(association_a.id)
-            assert models.Association.id_exists(association_b.id)
-            assert models.Association.count() == 2
+        assert models.Association.id_exists(association_a.id)
+        assert models.Association.id_exists(association_b.id)
+        assert models.Association.count() == 2
 
-            assert models.Association.count("user_id", user.id) == 2
-            assert models.Association.count("sticker_id", sticker.id) == 2
-            assert models.Association.count("label_id") == 2
+        assert models.Association.count("user_id", user.id) == 2
+        assert models.Association.count("sticker_id", sticker.id) == 2
+        assert models.Association.count("label_id") == 2
 
     def test_duplicates(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            user = model_factories.UserFactory()
-            sticker = model_factories.StickerFactory()
-            label = model_factories.LabelFactory()
-            association = model_factories.AssociationFactory(
+        user = model_factories.UserFactory()
+        sticker = model_factories.StickerFactory()
+        label = model_factories.LabelFactory()
+        association = model_factories.AssociationFactory(
+            user=user, sticker=sticker, label=label)
+
+        with pytest.raises(IntegrityError):
+            user_duplicate = model_factories.UserFactory(user_id=user.id)
+
+        with pytest.raises(IntegrityError):
+            sticker_duplicate = model_factories.StickerFactory(
+                sticker_id=sticker.id)
+
+        with pytest.raises(IntegrityError):
+            label_duplicate = model_factories.LabelFactory(
+                text=label.text)
+
+        with pytest.raises(IntegrityError):
+            association_duplicate = model_factories.AssociationFactory(
                 user=user, sticker=sticker, label=label)
 
-            with pytest.raises(IntegrityError):
-                user_duplicate = model_factories.UserFactory(user_id=user.id)
-
-            with pytest.raises(IntegrityError):
-                sticker_duplicate = model_factories.StickerFactory(
-                    sticker_id=sticker.id)
-
-            with pytest.raises(IntegrityError):
-                label_duplicate = model_factories.LabelFactory(
-                    text=label.text)
-
-            with pytest.raises(IntegrityError):
-                association_duplicate = model_factories.AssociationFactory(
-                    user=user, sticker=sticker, label=label)
-
-            assert models.User.count() == 1
-            assert models.Sticker.count() == 1
-            assert models.Label.count() == 1
-            assert models.Association.count() == 1
+        assert models.User.count() == 1
+        assert models.Sticker.count() == 1
+        assert models.Label.count() == 1
+        assert models.Association.count() == 1
 
 
 class TestRetrieval(object):
     def test_label_get(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            label = model_factories.LabelFactory()
-            retrieved_label = models.Label.get_or_create(label.text)
-            assert label == retrieved_label
+        label = model_factories.LabelFactory()
+        retrieved_label = models.Label.get_or_create(label.text)
+        assert label == retrieved_label
 
-            # TODO
-            # label_ids = models.Label.get_ids(label_texts[1:])
-            # assert set(label_ids) == {2, 3}
+        # TODO
+        # label_ids = models.Label.get_ids(label_texts[1:])
+        # assert set(label_ids) == {2, 3}
 
 
 # 3 variables: user, sticker, and label.
@@ -127,11 +132,11 @@ class TestRetrieveStickerByLabel(object):
 
         return associations
 
+    # Default setup_class runs before the clear_tables fixture.
+    # This is a fixture so that it will run after the other fixture.
     @classmethod
-    def setup_class(cls):
-        cls.context = app_for_testing.app_context()
-        cls.context.push()
-
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_class_after_clearing_tables(cls):
         clear_all_tables()
 
         cls.users = model_factories.UserFactory.build_batch(3)
@@ -160,11 +165,6 @@ class TestRetrieveStickerByLabel(object):
              irrelevant_associations_with_labels,
              irrelevant_associations_with_stickers,
              other_irrelevant_associations], [])
-
-    @classmethod
-    def teardown_class(cls):
-        clear_all_tables()
-        cls.context.pop()
 
     def test_different_users_same_stickers_same_labels(self):
         # [(user, sticker, label)]
@@ -210,128 +210,122 @@ class TestRetrieveStickerByLabel(object):
 @pytest.mark.incremental
 class TestAssociationUsage(object):
     def test_get_usage_count(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            user = model_factories.UserFactory()
-            sticker = model_factories.StickerFactory()
-            label = model_factories.LabelFactory()
-            association = model_factories.AssociationFactory(
-                user=user, sticker=sticker, label=label)
+        user = model_factories.UserFactory()
+        sticker = model_factories.StickerFactory()
+        label = model_factories.LabelFactory()
+        association = model_factories.AssociationFactory(
+            user=user, sticker=sticker, label=label)
 
-            usage = models.Association.get_usage_count(
-                sticker.id, label.text, user.id)
-            assert usage == 0
+        usage = models.Association.get_usage_count(
+            sticker.id, label.text, user.id)
+        assert usage == 0
 
-            new_usage = 5
-            association.uses = new_usage
-            usage = models.Association.get_usage_count(
-                sticker.id, label.text, user.id)
-            assert usage == new_usage
+        new_usage = 5
+        association.uses = new_usage
+        usage = models.Association.get_usage_count(
+            sticker.id, label.text, user.id)
+        assert usage == new_usage
 
     def test_get_usage_count_for_nonexistent_association(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            nonexistent_sticker_id = "0"
-            nonexistent_label = "label"
-            nonexistent_user_id = 0
+        nonexistent_sticker_id = "0"
+        nonexistent_label = "label"
+        nonexistent_user_id = 0
 
-            nonexistent_without_user_id = models.Association.get_usage_count(
-                nonexistent_sticker_id, nonexistent_label)
-            assert nonexistent_without_user_id == 0
+        nonexistent_without_user_id = models.Association.get_usage_count(
+            nonexistent_sticker_id, nonexistent_label)
+        assert nonexistent_without_user_id == 0
 
-            nonexistent_with_user_id = models.Association.get_usage_count(
-                nonexistent_sticker_id, nonexistent_label, nonexistent_user_id)
-            assert nonexistent_with_user_id == 0
+        nonexistent_with_user_id = models.Association.get_usage_count(
+            nonexistent_sticker_id, nonexistent_label, nonexistent_user_id)
+        assert nonexistent_with_user_id == 0
 
-            valid_label = model_factories.LabelFactory().text
-            valid_sticker_id = model_factories.StickerFactory().id
-            valid_user_id = model_factories.UserFactory().id
+        valid_label = model_factories.LabelFactory().text
+        valid_sticker_id = model_factories.StickerFactory().id
+        valid_user_id = model_factories.UserFactory().id
 
-            nonexistent_sticker_count = models.Association.get_usage_count(
-                nonexistent_sticker_id, valid_label, valid_user_id)
-            assert nonexistent_sticker_count == 0
+        nonexistent_sticker_count = models.Association.get_usage_count(
+            nonexistent_sticker_id, valid_label, valid_user_id)
+        assert nonexistent_sticker_count == 0
 
-            nonexistent_label_count = models.Association.get_usage_count(
-                valid_sticker_id, nonexistent_label, valid_user_id)
-            assert nonexistent_label_count == 0
+        nonexistent_label_count = models.Association.get_usage_count(
+            valid_sticker_id, nonexistent_label, valid_user_id)
+        assert nonexistent_label_count == 0
 
-            nonexistent_user_count = models.Association.get_usage_count(
-                valid_sticker_id, valid_label, nonexistent_user_id)
-            assert nonexistent_user_count == 0
+        nonexistent_user_count = models.Association.get_usage_count(
+            valid_sticker_id, valid_label, nonexistent_user_id)
+        assert nonexistent_user_count == 0
 
     def test_get_usage_count_across_users(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            sticker = model_factories.StickerFactory()
-            label = model_factories.LabelFactory()
-            associations = model_factories.AssociationFactory.build_batch(
-                3, sticker=sticker, label=label)
+        sticker = model_factories.StickerFactory()
+        label = model_factories.LabelFactory()
+        associations = model_factories.AssociationFactory.build_batch(
+            3, sticker=sticker, label=label)
 
-            associations_unique = \
-                model_factories.AssociationFactory.build_batch(5)
+        associations_unique = \
+            model_factories.AssociationFactory.build_batch(5)
 
-            for association in associations + associations_unique:
-                association.uses = 1
-            models.database.session.flush()
+        for association in associations + associations_unique:
+            association.uses = 1
+        models.database.session.flush()
 
-            count = models.Association.get_usage_count(sticker.id, label.text)
-            assert count == len(associations)
+        count = models.Association.get_usage_count(sticker.id, label.text)
+        assert count == len(associations)
 
     def test_increment_usage(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            label = model_factories.LabelFactory()
-            association = model_factories.AssociationFactory(label=label)
-            assert association.uses == 0
+        label = model_factories.LabelFactory()
+        association = model_factories.AssociationFactory(label=label)
+        assert association.uses == 0
 
-            models.Association.increment_usage(
-                association.user_id, association.sticker_id, [label.text])
-            assert association.uses == 1
+        models.Association.increment_usage(
+            association.user_id, association.sticker_id, [label.text])
+        assert association.uses == 1
 
     def test_increment_usage_for_nonexistent_association(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            models.Association.increment_usage(0, "0", ["label"])
+        models.Association.increment_usage(0, "0", ["label"])
 
     def test_increment_same_users_same_stickers_different_labels(self):
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
-            users = model_factories.UserFactory.build_batch(2)
-            stickers = model_factories.StickerFactory.build_batch(2)
-            labels = model_factories.LabelFactory.build_batch(2)
+        users = model_factories.UserFactory.build_batch(2)
+        stickers = model_factories.StickerFactory.build_batch(2)
+        labels = model_factories.LabelFactory.build_batch(2)
 
-            # user, sticker, label
-            association_groups = [(0, 0, 0),
-                                  (1, 0, 0),
-                                  (0, 1, 0),
-                                  (0, 0, 1)]
+        # user, sticker, label
+        association_groups = [(0, 0, 0),
+                              (1, 0, 0),
+                              (0, 1, 0),
+                              (0, 0, 1)]
 
-            associations = [model_factories.AssociationFactory(
-                user=users[u], sticker=stickers[s], label=labels[l])
-                for u, s, l in association_groups]
+        associations = [model_factories.AssociationFactory(
+            user=users[u], sticker=stickers[s], label=labels[l])
+            for u, s, l in association_groups]
 
-            relevant_indices = [0, 3]
-            relevant_association_groups = [association_groups[i]
-                                           for i in relevant_indices]
+        relevant_indices = [0, 3]
+        relevant_association_groups = [association_groups[i]
+                                       for i in relevant_indices]
 
-            current_uses = [models.Association.get_usage_count(
-                stickers[s].id, labels[l].text, users[u].id)
-                for u, s, l in relevant_association_groups]
+        current_uses = [models.Association.get_usage_count(
+            stickers[s].id, labels[l].text, users[u].id)
+            for u, s, l in relevant_association_groups]
 
-            relevant_labels = [label.text for label in labels[:2]]
-            models.Association.increment_usage(
-                users[0].id, stickers[0].id, relevant_labels)
+        relevant_labels = [label.text for label in labels[:2]]
+        models.Association.increment_usage(
+            users[0].id, stickers[0].id, relevant_labels)
 
-            new_uses = [models.Association.get_usage_count(
-                stickers[s].id, labels[l].text, users[u].id)
-                for u, s, l in relevant_association_groups]
+        new_uses = [models.Association.get_usage_count(
+            stickers[s].id, labels[l].text, users[u].id)
+            for u, s, l in relevant_association_groups]
 
-            incremented_uses = [use + 1 for use in current_uses]
+        incremented_uses = [use + 1 for use in current_uses]
 
-            assert new_uses == incremented_uses
+        assert new_uses == incremented_uses

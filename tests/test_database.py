@@ -17,10 +17,19 @@ def app_context_per_test_class():
     context.pop()
 
 
+@pytest.fixture(scope="class", autouse=True)
+def clear_tables_before_and_after_each_test_class():
+    clear_all_tables()
+    yield
+    clear_all_tables()
+
+
 class TestInsertion(object):
-    def test_insertion_basic(self):
+    @pytest.fixture(scope="function", autouse=True)
+    def clear_tables_before_each_test_function(self):
         clear_all_tables()
 
+    def test_insertion_basic(self):
         user = model_factories.UserFactory()
         sticker = model_factories.StickerFactory()
         label = model_factories.LabelFactory()
@@ -40,8 +49,6 @@ class TestInsertion(object):
         assert models.Association.count() == 1
 
     def test_insertion_overlapping(self):
-        clear_all_tables()
-
         user = model_factories.UserFactory()
         sticker = model_factories.StickerFactory()
         label_a = model_factories.LabelFactory()
@@ -71,8 +78,6 @@ class TestInsertion(object):
         assert models.Association.count("label_id") == 2
 
     def test_duplicates(self):
-        clear_all_tables()
-
         user = model_factories.UserFactory()
         sticker = model_factories.StickerFactory()
         label = model_factories.LabelFactory()
@@ -102,8 +107,6 @@ class TestInsertion(object):
 
 class TestRetrieval(object):
     def test_label_get(self):
-        clear_all_tables()
-
         label = model_factories.LabelFactory()
         retrieved_label = models.Label.get_or_create(label.text)
         assert label == retrieved_label
@@ -137,8 +140,6 @@ class TestRetrieveStickerByLabel(object):
     @classmethod
     @pytest.fixture(scope="class", autouse=True)
     def setup_class_after_clearing_tables(cls):
-        clear_all_tables()
-
         cls.users = model_factories.UserFactory.build_batch(3)
         cls.labels = model_factories.LabelFactory.build_batch(3)
         cls.stickers = model_factories.StickerFactory.build_batch(3)
@@ -210,8 +211,6 @@ class TestRetrieveStickerByLabel(object):
 @pytest.mark.incremental
 class TestAssociationUsage(object):
     def test_get_usage_count(self):
-        clear_all_tables()
-
         user = model_factories.UserFactory()
         sticker = model_factories.StickerFactory()
         label = model_factories.LabelFactory()
@@ -229,8 +228,6 @@ class TestAssociationUsage(object):
         assert usage == new_usage
 
     def test_get_usage_count_for_nonexistent_association(self):
-        clear_all_tables()
-
         nonexistent_sticker_id = "0"
         nonexistent_label = "label"
         nonexistent_user_id = 0
@@ -260,8 +257,6 @@ class TestAssociationUsage(object):
         assert nonexistent_user_count == 0
 
     def test_get_usage_count_across_users(self):
-        clear_all_tables()
-
         sticker = model_factories.StickerFactory()
         label = model_factories.LabelFactory()
         associations = model_factories.AssociationFactory.build_batch(
@@ -278,8 +273,6 @@ class TestAssociationUsage(object):
         assert count == len(associations)
 
     def test_increment_usage(self):
-        clear_all_tables()
-
         label = model_factories.LabelFactory()
         association = model_factories.AssociationFactory(label=label)
         assert association.uses == 0
@@ -288,14 +281,11 @@ class TestAssociationUsage(object):
             association.user_id, association.sticker_id, [label.text])
         assert association.uses == 1
 
+    # Incrementing should fail silently
     def test_increment_usage_for_nonexistent_association(self):
-        clear_all_tables()
-
         models.Association.increment_usage(0, "0", ["label"])
 
     def test_increment_same_users_same_stickers_different_labels(self):
-        clear_all_tables()
-
         users = model_factories.UserFactory.build_batch(2)
         stickers = model_factories.StickerFactory.build_batch(2)
         labels = model_factories.LabelFactory.build_batch(2)

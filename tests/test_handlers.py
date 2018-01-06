@@ -268,8 +268,7 @@ class TestCallbackQueryHandlerInLabelState(object):
             conversation, handlers.CallbackData.ButtonText.CONFIRM)
 
         with mock.patch("stickertaggerbot.handlers.models.User.id_exists",
-                        mock.MagicMock(return_value=False)), \
-             app_for_testing.app_context():
+                        mock.MagicMock(return_value=False)):
             database_user = handlers.models.User.from_telegram_user(
                 conversation.user, conversation.chat.id)
 
@@ -280,14 +279,13 @@ class TestCallbackQueryHandlerInLabelState(object):
              mock.patch(*get_or_create(conversation)), \
              mock.patch("stickertaggerbot.handlers.models.Association",
                         mock.MagicMock(autospec=True)), \
-             mock.patch("stickertaggerbot.handlers.models.database.session.commit",
-                        mock.MagicMock(autospec=True)):
+             mock.patch(
+                 "stickertaggerbot.handlers.models.database.session.commit",
+                 mock.MagicMock(autospec=True)):
             run_handler(handlers.create_callback_handler, update)
 
         time.sleep(2)
-
-        with app_for_testing.app_context():
-            clear_all_tables()
+        clear_all_tables()
 
         bot.send_message.assert_called_once_with(
             conversation.chat.id, handlers.Message.Other.SUCCESS.value)
@@ -320,14 +318,13 @@ class TestInlineQueryHandler(object):
         query = mock.MagicMock()
         query.filter_by = mock.MagicMock(autospec=True,
                                          return_value=filter_return)
-        with app_for_testing.app_context():
-            patch = mock.patch(
-                "stickertaggerbot.handlers.models.Association.query", query)
-            patch.start()
+
+        patch = mock.patch(
+            "stickertaggerbot.handlers.models.Association.query", query)
+        patch.start()
 
         yield
-        with app_for_testing.app_context():
-            patch.stop()
+        patch.stop()
 
     def set_user_association(self, result):
         handlers.models.Association.query.filter_by.return_value.count.return_value = result

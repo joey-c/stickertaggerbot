@@ -3,18 +3,9 @@ from sqlite3 import IntegrityError
 
 from stickertaggerbot import models
 from tests import model_factories
-from tests.misc import clear_all_tables, app_for_testing
+from tests.misc import clear_all_tables
 
 models.sqlalchemy_logging(True)
-
-
-# TODO: should there just be one app context per session?
-@pytest.fixture(scope="class", autouse=True)
-def app_context_per_test_class():
-    context = app_for_testing.app_context()
-    context.push()
-    yield
-    context.pop()
 
 
 @pytest.fixture(scope="class", autouse=True)

@@ -17,18 +17,16 @@ def post(update):
                                content_type="application/json")
 
 
+# Commit the session after the test is run to maintain a clean slate
+# Committing before yielding is not necessary because it will appear clean to
+# any requests.
 @pytest.fixture(scope="class", autouse=True)
 def clear_tables():
-    with app_for_testing.app_context():
-        existing_users = models.User.query.all()  #TODO: Is checking neccesary?
-        if len(existing_users) > 0:
-            clear_all_tables()
-            models.database.session.commit()
-
+    clear_all_tables()
     yield
-    with app_for_testing.app_context():
-        clear_all_tables()
-        models.database.session.commit()
+    clear_all_tables()
+    models.database.session.commit()
+
 
 @pytest.mark.incremental
 class TestNormalUsage(object):

@@ -96,15 +96,33 @@ class TestInsertion(object):
         assert models.Association.count() == 1
 
 
-class TestRetrieval(object):
-    def test_label_get(self):
-        label = model_factories.LabelFactory()
-        retrieved_label = models.Label.get_or_create(label.text)
-        assert label == retrieved_label
+class TestLabelRetrieval(object):
+    def test_get_nonexisting_label(self):
+        retrieved_label = models.Label.get_or_create("label0",
+                                                     get_only=True)
+        assert retrieved_label is None
 
-        # TODO
-        # label_ids = models.Label.get_ids(label_texts[1:])
-        # assert set(label_ids) == {2, 3}
+    def test_create_new_label(self):
+        label_text = "label1"
+        created_label = models.Label.get_or_create(label_text)
+        assert created_label is not None
+        assert created_label.text == label_text
+
+    def test_get_existing_label_by_text(self):
+        label_text = "label2"
+        label = model_factories.LabelFactory(text=label_text)
+
+        retrieved_label = models.Label.get_or_create(label_text,
+                                                     get_only=True)
+        assert retrieved_label == label
+
+    def test_get_existing_label_ids_by_texts(self):
+        labels = model_factories.LabelFactory.build_batch(5)
+        label_ids = [label.id for label in labels]
+        label_texts = [label.text for label in labels]
+
+        retrieved_label_ids = models.Label.get_ids(label_texts)
+        assert set(retrieved_label_ids) == set(label_ids)
 
 
 # 3 variables: user, sticker, and label.

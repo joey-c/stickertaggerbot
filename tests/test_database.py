@@ -116,12 +116,13 @@ class TestRetrieval(object):
 class TestRetrieveStickerByLabel(object):
     # raw_associations: [(user, sticker, label)]
     def populate_associations(self, raw_associations):
-        associations = [model_factories.AssociationFactory(
-            user=models.database.session.merge(self.users[u], load=False),
-            sticker=models.database.session.merge(self.stickers[s],
-                                                  load=False),
-            label=models.database.session.merge(self.labels[l],
-                                                load=False))
+        associations = [
+            model_factories.AssociationFactory(
+                user=models.database.session.merge(self.users[u], load=False),
+                sticker=models.database.session.merge(self.stickers[s],
+                                                      load=False),
+                label=models.database.session.merge(self.labels[l],
+                                                    load=False))
             for u, s, l in raw_associations]
 
         return associations

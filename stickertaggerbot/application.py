@@ -16,3 +16,4 @@ def route_update():
     application.update_queue.put(update)
     loggers.APP.info("Received update " + str(update.update_id))
     return ""
+

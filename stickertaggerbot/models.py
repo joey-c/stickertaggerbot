@@ -1,7 +1,6 @@
 import logging
 
 import flask_sqlalchemy as fsa
-from sqlalchemy import literal
 from sqlalchemy.sql.functions import func
 from sqlite3 import IntegrityError  # TODO Use a different Error
 

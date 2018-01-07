@@ -1,5 +1,4 @@
 import pytest
-from sqlite3 import IntegrityError
 
 from stickertaggerbot import models
 from tests import model_factories
@@ -75,18 +74,18 @@ class TestInsertion(object):
         association = model_factories.AssociationFactory(
             user=user, sticker=sticker, label=label)
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(models.ObjectAlreadyExistsError):
             user_duplicate = model_factories.UserFactory(user_id=user.id)
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(models.ObjectAlreadyExistsError):
             sticker_duplicate = model_factories.StickerFactory(
                 sticker_id=sticker.id)
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(models.ObjectAlreadyExistsError):
             label_duplicate = model_factories.LabelFactory(
                 text=label.text)
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(models.ObjectAlreadyExistsError):
             association_duplicate = model_factories.AssociationFactory(
                 user=user, sticker=sticker, label=label)
 

@@ -2,7 +2,6 @@ import logging
 
 import flask_sqlalchemy as fsa
 from sqlalchemy.sql.functions import func
-from sqlite3 import IntegrityError  # TODO Use a different Error
 
 # NOTE: All Models flush the session upon creation
 
@@ -19,6 +18,10 @@ def sqlalchemy_logging(log=False, level=logging.DEBUG):
     if log:
         for logger in sqlalchemy_loggers:
             logging.getLogger(logger).setLevel(level)
+
+
+class ObjectAlreadyExistsError(Exception):
+    pass
 
 
 class ModelMixin(object):
@@ -67,7 +70,7 @@ class User(database.Model, ModelMixin):
     def __init__(self, user_id, chat_id, first_name, last_name=None,
                  username=None, language=None):
         if User.id_exists(user_id):
-            raise IntegrityError("User exists")
+            raise ObjectAlreadyExistsError("User exists")
 
         self.id = user_id
         self.chat_id = chat_id
@@ -103,7 +106,7 @@ class Sticker(database.Model, ModelMixin):
 
     def __init__(self, sticker_id, set_name=None):
         if Sticker.id_exists(sticker_id):
-            raise IntegrityError("Sticker exists")
+            raise ObjectAlreadyExistsError("Sticker exists")
 
         self.id = sticker_id
         self.set = set_name
@@ -133,7 +136,7 @@ class Label(database.Model, ModelMixin):
 
     def __init__(self, text):
         if Label.exists(text):
-            raise IntegrityError("Label exists")
+            raise ObjectAlreadyExistsError("Label exists")
 
         self.text = text
         self.add_to_database()
@@ -195,7 +198,7 @@ class Association(database.Model, ModelMixin):
 
     def __init__(self, user, sticker, label):
         if Association.exists(user, sticker, label):
-            raise IntegrityError("Association exists")
+            raise ObjectAlreadyExistsError("Association exists")
         self.user_id = user.id
         self.sticker_id = sticker.id
         self.label_id = label.id

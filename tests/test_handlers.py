@@ -36,6 +36,10 @@ def run_handler(handler_creator, update):
     handler.__wrapped__(bot, update)  # run without async
 
 
+class TestSendMessage(object):
+    pass
+
+
 class TestStartCommandHandler(object):
     @mock.patch.object(bot, "send_message", mock.MagicMock(autospec=True))
     @mock.patch("stickertaggerbot.handlers.models.User.add_to_database",

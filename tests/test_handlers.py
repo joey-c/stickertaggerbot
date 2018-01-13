@@ -1,15 +1,17 @@
 import time
-import pytest
 from unittest import mock
 
-from stickertaggerbot import handlers, conversations
+import pytest
 
+from stickertaggerbot import handlers, conversations, message
 from tests import telegram_factories
 from tests.misc import app_for_testing, clear_all_tables
 
 bot = app_for_testing.bot
 States = conversations.Conversation.State
 
+
+# TODO test Message separately and patch Message instead of the bot here
 
 # Returns a new mock Conversation instance
 @mock.patch("stickertaggerbot.handlers.conversations.Conversation")
@@ -60,8 +62,7 @@ class TestStartCommandHandler(object):
         handlers.models.User.add_to_database.assert_called_once_with()
 
         bot.send_message.assert_called_once_with(
-            chat_id,
-            handlers.Message.Instruction.START.value)
+            chat_id, message.Text.Instruction.START.value)
 
 
 class TestStickerHandler(object):
@@ -95,8 +96,7 @@ class TestStickerHandler(object):
         assert conversation.rollback_state.call_args is None
 
         bot.send_message.assert_called_once_with(
-            update.effective_chat.id,
-            handlers.Message.Instruction.LABEL.value)
+            update.effective_chat.id, message.Text.Instruction.LABEL.value)
 
     def test_interrupted_conversation(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -110,8 +110,7 @@ class TestStickerHandler(object):
         conversation.change_state.assert_called_once()
         assert conversation.rollback_state.call_args is None
         bot.send_message.assert_called_once_with(
-            update.effective_chat.id,
-            handlers.Message.Error.RESTART.value)
+            update.effective_chat.id, message.Text.Error.RESTART.value)
 
     def test_sticker_exists(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -124,8 +123,7 @@ class TestStickerHandler(object):
         conversation.change_state.assert_called_once()
         conversation.rollback_state.assert_called_once()
         bot.send_message.assert_called_once_with(
-            update.effective_chat.id,
-            handlers.Message.Error.STICKER_EXISTS.value)
+            update.effective_chat.id, message.Text.Error.STICKER_EXISTS.value)
 
     def test_future_timed_out(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -138,8 +136,7 @@ class TestStickerHandler(object):
         conversation.change_state.assert_called_once()
         conversation.rollback_state.assert_called_once()
         bot.send_message.assert_called_once_with(
-            update.effective_chat.id,
-            handlers.Message.Error.UNKNOWN.value)
+            update.effective_chat.id, message.Text.Error.UNKNOWN.value)
 
 
 class TestLabelsHandler(object):
@@ -163,8 +160,7 @@ class TestLabelsHandler(object):
             run_handler(handlers.create_labels_handler, update)
 
         bot.send_message.assert_called_once_with(
-            chat_id,
-            handlers.Message.Error.NOT_STARTED.value)
+            chat_id, message.Text.Error.NOT_STARTED.value)
 
     def test_interrupted_conversation(self, conversation):
         conversation.change_state = mock.Mock(
@@ -177,7 +173,7 @@ class TestLabelsHandler(object):
 
         chat_id = update.effective_chat.id
         bot.send_message.assert_called_once_with(
-            chat_id, handlers.Message.Error.RESTART.value)
+            chat_id, message.Text.Error.RESTART.value)
 
     def test_empty_labels(self, conversation):
         conversation.labels = None
@@ -188,8 +184,7 @@ class TestLabelsHandler(object):
 
         chat_id = update.effective_chat.id
         bot.send_message.assert_called_once_with(
-            chat_id,
-            handlers.Message.Error.LABEL_MISSING.value)
+            chat_id, message.Text.Error.LABEL_MISSING.value)
 
     def test_one_label(self, conversation):
         label = "label"
@@ -292,7 +287,7 @@ class TestCallbackQueryHandlerInLabelState(object):
         clear_all_tables()
 
         bot.send_message.assert_called_once_with(
-            conversation.chat.id, handlers.Message.Other.SUCCESS.value)
+            conversation.chat.id, message.Text.Other.SUCCESS.value)
 
     def test_cancel(self, conversation, sticker, callback_query_update):
         conversation.sticker = sticker
@@ -304,7 +299,7 @@ class TestCallbackQueryHandlerInLabelState(object):
             run_handler(handlers.create_callback_handler, update)
 
         bot.send_message.assert_called_once_with(
-            conversation.chat.id, handlers.Message.Instruction.RE_LABEL.value)
+            conversation.chat.id, message.Text.Instruction.RE_LABEL.value)
 
 
 class TestInlineQueryHandler(object):
@@ -345,7 +340,7 @@ class TestInlineQueryHandler(object):
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
             is_personal=True,
-            switch_pm_text=handlers.Message.Error.NOT_STARTED.value)
+            switch_pm_text=message.Text.Error.NOT_STARTED.value)
 
     @mock.patch("stickertaggerbot.handlers.models.Association.get_sticker_ids",
                 mock.MagicMock(autospec=True, return_value=[]))
@@ -361,7 +356,7 @@ class TestInlineQueryHandler(object):
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
             is_personal=True,
-            switch_pm_text=handlers.Message.Error.NO_MATCHES.value)
+            switch_pm_text=message.Text.Error.NO_MATCHES.value)
 
     def test_one_label(self):
         self.set_user_association(1)

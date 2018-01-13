@@ -2,7 +2,7 @@ import time
 import pytest
 from unittest import mock
 
-from stickertaggerbot import config, models, conversations, handlers
+from stickertaggerbot import config, models, conversations, handlers, message
 
 from tests import telegram_factories
 from tests.misc import app_for_testing, clear_all_tables
@@ -66,7 +66,7 @@ class TestNormalUsage(object):
         assert database_user is not None
 
         app_for_testing.bot.send_message.assert_called_once_with(
-            self.chat.id, handlers.Message.Instruction.START.value)
+            self.chat.id, message.Text.Instruction.START.value)
 
     def test_new_sticker(self):
         update = telegram_factories.StickerUpdateFactory(
@@ -80,7 +80,7 @@ class TestNormalUsage(object):
         assert conversation.sticker == self.sticker
 
         app_for_testing.bot.send_message.assert_called_once_with(
-            self.chat.id, handlers.Message.Instruction.LABEL.value)
+            self.chat.id, message.Text.Instruction.LABEL.value)
 
     def test_label(self):
         update = telegram_factories.MessageUpdateFactory(
@@ -118,7 +118,7 @@ class TestNormalUsage(object):
         assert sticker_ids[0] == self.sticker.file_id
 
         app_for_testing.bot.send_message.assert_called_once_with(
-            self.chat.id, handlers.Message.Other.SUCCESS.value)
+            self.chat.id, message.Text.Other.SUCCESS.value)
 
     def test_retrieve(self):
         update = telegram_factories.InlineQueryUpdateFactory(

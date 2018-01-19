@@ -11,8 +11,6 @@ bot = app_for_testing.bot
 States = conversations.Conversation.State
 
 
-# TODO test Message separately and patch Message instead of the bot here
-
 # Returns a new mock Conversation instance
 @mock.patch("stickertaggerbot.handlers.conversations.Conversation")
 @pytest.fixture()
@@ -33,45 +31,69 @@ def get_or_create(conversation):
     return args
 
 
+outgoing_message_patches = [
+    mock.patch("stickertaggerbot.handlers.message.Message.set_content",
+               autospec=True,
+               side_effect=lambda self, content: self),
+    mock.patch("stickertaggerbot.handlers.message.Message.send",
+               autospec=True)]
+
+
+def assert_sent_message_once(message_content=None):
+    message.Message.set_content.assert_called_once()
+
+    # call_args: ((self, content), kwargs)
+    if message_content:
+        assert message.Message.set_content.call_args[0][1] == message_content
+
+    message.Message.send.assert_called_once()
+
+
 def run_handler(handler_creator, update):
     handler = handler_creator(app_for_testing)
     handler.__wrapped__(bot, update)  # run without async
 
 
-class TestSendMessage(object):
-    pass
-
-
 class TestStartCommandHandler(object):
-    @mock.patch.object(bot, "send_message", mock.MagicMock(autospec=True))
-    @mock.patch("stickertaggerbot.handlers.models.User.add_to_database",
-                mock.MagicMock(autospec=True))
-    @mock.patch("stickertaggerbot.handlers.models.database.session.commit",
-                mock.MagicMock(autospec=True))
-    @mock.patch("stickertaggerbot.handlers.models.User.get",
-                mock.MagicMock(autospec=True, return_value=None))
+    @pytest.fixture(autouse=True)
+    def patches(self):
+        patches = [
+            mock.patch("stickertaggerbot.handlers.models.User.add_to_database",
+                       mock.MagicMock(autospec=True)),
+            mock.patch(
+                "stickertaggerbot.handlers.models.database.session.commit",
+                mock.MagicMock(autospec=True)),
+            mock.patch("stickertaggerbot.handlers.models.User.get",
+                       mock.MagicMock(autospec=True, return_value=None))]
+
+        patches.extend(outgoing_message_patches)
+
+        for patch in patches:
+            patch.start()
+        yield
+        for patch in patches:
+            patch.stop()
+
     def test_new_user(self):
         update = telegram_factories.CommandUpdateFactory(
             message__command="start")
         user_id = update.effective_user.id
-        chat_id = update.effective_chat.id
 
         run_handler(handlers.create_command_start_handler, update)
 
         handlers.models.User.get.assert_called_once_with(user_id)
         handlers.models.User.add_to_database.assert_called_once_with()
-
-        bot.send_message.assert_called_once_with(
-            chat_id, message.Text.Instruction.START.value)
+        assert_sent_message_once(message.Text.Instruction.START)
 
 
 class TestStickerHandler(object):
     @pytest.yield_fixture(autouse=True)
-    def patch_telegram(self):
-        patch = mock.patch.object(bot, "send_message")
-        patch.start()
+    def patches(self):
+        for patch in outgoing_message_patches:
+            patch.start()
         yield
-        patch.stop()
+        for patch in outgoing_message_patches:
+            patch.stop()
 
     @pytest.fixture
     def update_maker(self):
@@ -94,9 +116,7 @@ class TestStickerHandler(object):
         assert conversation.sticker == update.effective_message.sticker
         conversation.change_state.assert_called_once()
         assert conversation.rollback_state.call_args is None
-
-        bot.send_message.assert_called_once_with(
-            update.effective_chat.id, message.Text.Instruction.LABEL.value)
+        assert_sent_message_once(message.Text.Instruction.LABEL)
 
     def test_interrupted_conversation(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -109,8 +129,7 @@ class TestStickerHandler(object):
 
         conversation.change_state.assert_called_once()
         assert conversation.rollback_state.call_args is None
-        bot.send_message.assert_called_once_with(
-            update.effective_chat.id, message.Text.Error.RESTART.value)
+        assert_sent_message_once(message.Text.Error.RESTART)
 
     def test_sticker_exists(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -122,8 +141,7 @@ class TestStickerHandler(object):
 
         conversation.change_state.assert_called_once()
         conversation.rollback_state.assert_called_once()
-        bot.send_message.assert_called_once_with(
-            update.effective_chat.id, message.Text.Error.STICKER_EXISTS.value)
+        assert_sent_message_once(message.Text.Error.STICKER_EXISTS)
 
     def test_future_timed_out(self, update_maker, conversation):
         update = update_maker(conversation)
@@ -135,32 +153,26 @@ class TestStickerHandler(object):
 
         conversation.change_state.assert_called_once()
         conversation.rollback_state.assert_called_once()
-        bot.send_message.assert_called_once_with(
-            update.effective_chat.id, message.Text.Error.UNKNOWN.value)
+        assert_sent_message_once(message.Text.Error.UNKNOWN)
 
 
 class TestLabelsHandler(object):
     @pytest.yield_fixture(autouse=True)
-    def patch_telegram(self):
-        patches = []
-        patches.append(mock.patch.object(bot, "send_message"))
-        patches.append(mock.patch.object(bot, "send_sticker"))
-        for patch in patches:
+    def patches(self):
+        for patch in outgoing_message_patches:
             patch.start()
         yield
-        for patch in patches:
+        for patch in outgoing_message_patches:
             patch.stop()
 
     def test_no_conversation(self):
         update = telegram_factories.MessageUpdateFactory(
             message__text="message")
-        chat_id = update.effective_chat.id
 
         with mock.patch(*get_or_create(None)):
             run_handler(handlers.create_labels_handler, update)
 
-        bot.send_message.assert_called_once_with(
-            chat_id, message.Text.Error.NOT_STARTED.value)
+        assert_sent_message_once(message.Text.Error.NOT_STARTED.value)
 
     def test_interrupted_conversation(self, conversation):
         conversation.change_state = mock.Mock(
@@ -171,9 +183,7 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        chat_id = update.effective_chat.id
-        bot.send_message.assert_called_once_with(
-            chat_id, message.Text.Error.RESTART.value)
+        assert_sent_message_once(message.Text.Error.RESTART.value)
 
     def test_empty_labels(self, conversation):
         conversation.labels = None
@@ -182,9 +192,7 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        chat_id = update.effective_chat.id
-        bot.send_message.assert_called_once_with(
-            chat_id, message.Text.Error.LABEL_MISSING.value)
+        assert_sent_message_once(message.Text.Error.LABEL_MISSING.value)
 
     def test_one_label(self, conversation):
         label = "label"
@@ -202,12 +210,19 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        chat_id = update.effective_chat.id
-        bot.send_sticker.assert_called_once_with(chat_id, sticker)
-        bot.send_message.assert_called_once()
+        assert message.Message.set_content.call_count == 2
+        assert message.Message.send.call_count == 2
+
+        first_call_contents, second_call_contents = \
+            message.Message.set_content.call_args_list
+        assert first_call_contents[0][1] == sticker
+        assert second_call_contents[0][1] == \
+               message.Text.Instruction.CONFIRM.value + label
 
     # TODO Distinguish test from test_one_label
     def test_multiple_labels(self, conversation):
+        labels = ["label1", "label2", "label3"]
+
         sticker = telegram_factories.StickerFactory()
         conversation.sticker = sticker
 
@@ -215,23 +230,28 @@ class TestLabelsHandler(object):
         conversation.user = user
 
         update = telegram_factories.MessageUpdateFactory(
-            message__text="label1 label2 label3")
-        chat_id = update.effective_chat.id
+            message__text=" ".join(labels))
 
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        bot.send_sticker.assert_called_once_with(chat_id, sticker)
-        bot.send_message.assert_called_once()
+        assert message.Message.set_content.call_count == 2
+        assert message.Message.send.call_count == 2
+
+        first_call_contents, second_call_contents = \
+            message.Message.set_content.call_args_list
+        assert first_call_contents[0][1] == sticker
+        assert second_call_contents[0][1] == \
+               message.Text.Instruction.CONFIRM.value + "\n".join(labels)
 
 
 class TestCallbackQueryHandlerInLabelState(object):
     @pytest.fixture(autouse=True)
     def patch(self):
-        patches = []
-        patches.append(mock.patch.object(bot, "send_message"))
+        patches = outgoing_message_patches
         patches.append(mock.patch(
             "stickertaggerbot.handlers.models.database.session.commit"))
+
         for patch in patches:
             patch.start()
         yield
@@ -286,8 +306,7 @@ class TestCallbackQueryHandlerInLabelState(object):
         time.sleep(2)
         clear_all_tables()
 
-        bot.send_message.assert_called_once_with(
-            conversation.chat.id, message.Text.Other.SUCCESS.value)
+        assert_sent_message_once(message.Text.Other.SUCCESS)
 
     def test_cancel(self, conversation, sticker, callback_query_update):
         conversation.sticker = sticker
@@ -298,8 +317,7 @@ class TestCallbackQueryHandlerInLabelState(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_callback_handler, update)
 
-        bot.send_message.assert_called_once_with(
-            conversation.chat.id, message.Text.Instruction.RE_LABEL.value)
+        assert_sent_message_once(message.Text.Instruction.RE_LABEL)
 
 
 class TestInlineQueryHandler(object):

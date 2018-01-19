@@ -211,7 +211,7 @@ def create_labels_handler(app):
         conversation.labels = new_labels
         # TODO Include existing labels
         if len(new_labels) > 1:
-            message_labels = "/n".join(new_labels)
+            message_labels = "\n".join(new_labels)
         else:
             message_labels = new_labels[0]
 

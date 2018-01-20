@@ -1,7 +1,7 @@
 import flask
 import telegram
 
-from stickertaggerbot import config, flask_app, loggers
+from stickertaggerbot import config, flask_app, logging
 
 app_config = {"SQLALCHEMY_DATABASE_URI": config.DATABASE_URI,
               "SQLALCHEMY_TRACK_MODIFICATIONS": False}
@@ -14,6 +14,7 @@ def route_update():
     update_json = flask.request.get_json()
     update = telegram.Update.de_json(update_json, application.bot)
     application.update_queue.put(update)
-    loggers.APP.info("Received update " + str(update.update_id))
+    logging.get_logger(logging.Type.APP).info("Received update " +
+                                              str(update.update_id))
     return ""
 

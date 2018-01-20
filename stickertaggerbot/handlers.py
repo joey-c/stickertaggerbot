@@ -4,7 +4,7 @@ from enum import Enum
 import telegram.ext
 from telegram.ext.dispatcher import run_async
 
-from stickertaggerbot import conversations, models, config, loggers, message
+from stickertaggerbot import conversations, models, config, logging, message
 
 pool = concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_WORKERS)
 
@@ -61,9 +61,9 @@ class StickerResult(telegram.InlineQueryResultCachedSticker):
 def create_command_start_handler(app):
     @run_async
     def command_start_handler(bot, update):
-        logger = loggers.HANDLER_START
-        log_prefix = loggers.update_prefix(update)
-        loggers.logger_start(logger, update.update_id)
+        logger = logging.get_logger(logging.Type.HANDLER_START,
+                                    update.update_id)
+        logger.log_start()
 
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
@@ -73,16 +73,15 @@ def create_command_start_handler(app):
         with app.app_context():
             user = models.User.get(user_id)
             if not user:
-                logger.debug(
-                    log_prefix + "User " + str(user_id) + " not found")
+                logger.debug("User " + str(user_id) + " not found")
                 user = models.User.from_telegram_user(update.effective_user,
                                                       chat_id)
                 models.database.session.commit()
-                logger.debug(log_prefix + "Created user " + str(user_id))
+                logger.debug("Created user " + str(user_id))
 
         response_content = message.Text.Instruction.START
         response.set_content(response_content).send()
-        loggers.log_sent_message(logger, log_prefix, response_content)
+        logger.log_sent_message(response_content)
 
     return command_start_handler
 
@@ -100,9 +99,9 @@ def sticker_is_new(app, user, sticker):
 def create_sticker_handler(app):
     @run_async
     def sticker_handler(bot, update):
-        logger = loggers.HANDLER_STICKER
-        log_prefix = loggers.update_prefix(update)
-        loggers.logger_start(logger, update.update_id)
+        logger = logging.get_logger(logging.Type.HANDLER_STICKER,
+                                    update.update_id)
+        logger.log_start()
 
         user = update.effective_user
         sticker = update.effective_message.sticker
@@ -120,36 +119,35 @@ def create_sticker_handler(app):
         except ValueError as e:
             # TODO Ask user if they want to cancel previous conversation
             state, = e.args
-            loggers.log_failed_to_change_conversation_state(
-                logger, log_prefix, state,
-                conversations.Conversation.State.STICKER)
+            logger.log_failed_to_change_conversation_state(
+                state, conversations.Conversation.State.STICKER)
 
             response_content = message.Text.Error.RESTART
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             return
 
-        logger.debug(log_prefix + "Entered STICKER state")
+        logger.debug("Entered STICKER state")
         new_sticker = conversation.get_future_result()
 
         if new_sticker:
             response_content = message.Text.Instruction.LABEL
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             conversation.sticker = sticker
         elif new_sticker is False:
-            logger.debug(log_prefix + "Sticker exists")
+            logger.debug("Sticker exists")
             response_content = message.Text.Error.STICKER_EXISTS
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             # TODO Ask user if they meant to change the sticker's labels
             conversation.rollback_state()
         else:
-            logger.debug(log_prefix + "Future timed out")
+            logger.debug("Future timed out")
 
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             conversation.rollback_state()
 
     return sticker_handler
@@ -164,9 +162,9 @@ def get_labels(update):
 def create_labels_handler(app):
     @run_async
     def labels_handler(bot, update):
-        logger = loggers.HANDLER_LABELS
-        log_prefix = loggers.update_prefix(update)
-        loggers.logger_start(logger, update.update_id)
+        logger = logging.get_logger(logging.Type.HANDLER_LABELS,
+                                    update.update_id)
+        logger.log_start()
 
         user = update.effective_user
         chat_id = update.effective_chat.id
@@ -175,10 +173,10 @@ def create_labels_handler(app):
 
         conversation = conversations.get_or_create(user, get_only=True)
         if not conversation:
-            loggers.log_conversation_not_found(logger, log_prefix, user.id)
+            logger.log_conversation_not_found(user.id)
             response_content = message.Text.Error.NOT_STARTED
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             return
 
         try:
@@ -186,24 +184,23 @@ def create_labels_handler(app):
                 conversations.Conversation.State.LABEL)
         except ValueError as e:
             state, = e.args
-            loggers.log_failed_to_change_conversation_state(
-                logger, log_prefix, state,
-                conversations.Conversation.State.LABEL)
+            logger.log_failed_to_change_conversation_state(
+                state, conversations.Conversation.State.LABEL)
             response_content = message.Text.Error.RESTART
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             return
 
         sticker = conversation.sticker
 
         new_labels = get_labels(update)
         if not new_labels:
-            logger.debug(log_prefix + "No new labels found. Message: " +
+            logger.debug("No new labels found. Message: " +
                          update.message.text)
 
             response_content = message.Text.Error.LABEL_MISSING
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
 
             conversation.rollback_state()
             return
@@ -230,7 +227,7 @@ def create_labels_handler(app):
         response_confirmation = message.Message(bot, update, logger, chat_id,
                                                 content=message_text)
         response_confirmation.send(reply_markup=inline_keyboard_markup)
-        logger.debug(log_prefix + "Sent sticker with confirmation message")
+        logger.debug("Sent sticker with confirmation message")
 
     return labels_handler
 
@@ -259,9 +256,9 @@ def generate_inline_keyboard_markup(callback_data_generator, button_texts):
 def create_callback_handler(app):
     @run_async
     def callback_handler(bot, update):
-        logger = loggers.HANDLER_CALLBACK_QUERY
-        log_prefix = loggers.update_prefix(update)
-        loggers.logger_start(logger, update.update_id)
+        logger = logging.get_logger(logging.Type.HANDLER_CALLBACK_QUERY,
+                                    update.update_id)
+        logger.log_start()
 
         callback_data = CallbackData.unwrap(update.callback_query.data)
         user = update.effective_user
@@ -271,10 +268,10 @@ def create_callback_handler(app):
 
         conversation = conversations.get_or_create(user, get_only=True)
         if not conversation:
-            loggers.log_conversation_not_found(logger, log_prefix, user.id)
+            logger.log_conversation_not_found(user.id)
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             return
 
         if callback_data.state == conversations.Conversation.State.LABEL:
@@ -284,9 +281,9 @@ def create_callback_handler(app):
 
 
 def handle_callback_for_labels(app, bot, update):
-    logger = loggers.HANDLER_CALLBACK_QUERY_LABELS
-    log_prefix = loggers.update_prefix(update)
-    loggers.logger_start(logger, update.update_id)
+    logger = logging.get_logger(logging.Type.HANDLER_CALLBACK_QUERY_LABELS,
+                                update.update_id)
+    logger.log_start()
 
     callback_data = CallbackData.unwrap(update.callback_query.data)
     chat_id = update.effective_chat.id
@@ -296,49 +293,45 @@ def handle_callback_for_labels(app, bot, update):
     response = message.Message(bot, update, logger, chat_id)
 
     if not conversation:
-        loggers.log_conversation_not_found(
-            logger, log_prefix, update.effective_user.id)
+        logger.log_conversation_not_found(update.effective_user.id)
         response_content = message.Text.Error.UNKNOWN
         response.set_content(response_content).send()
-        loggers.log_sent_message(logger, log_prefix, response_content)
+        logger.log_sent_message(response_content)
         return
 
     if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
-        logger.debug(log_prefix + "Button – confirm")
+        logger.debug("Button – confirm")
         try:
             conversation.change_state(
                 conversations.Conversation.State.CONFIRMED)
         except ValueError as e:
             state, = e.args
-            loggers.log_failed_to_change_conversation_state(
-                logger, log_prefix, state,
-                conversations.Conversation.State.CONFIRMED)
+            logger.log_failed_to_change_conversation_state(
+                state, conversations.Conversation.State.CONFIRMED)
 
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             return
 
         added = add_sticker(app, bot, update, conversation)
         if not added:
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
             conversation.rollback_state()
             return
 
         response_content = message.Text.Other.SUCCESS
         response.set_content(response_content).send()
-        loggers.log_sent_message(logger, log_prefix,
-                                 message.Text.Other.SUCCESS)
+        logger.log_sent_message(message.Text.Other.SUCCESS)
 
         try:
             conversation.change_state(conversations.Conversation.State.IDLE)
         except ValueError as e:
             state, = e.args
-            loggers.log_failed_to_change_conversation_state(
-                logger, log_prefix, state,
-                conversations.Conversation.State.IDLE)
+            logger.log_failed_to_change_conversation_state(
+                state, conversations.Conversation.State.IDLE)
 
             return
 
@@ -347,12 +340,12 @@ def handle_callback_for_labels(app, bot, update):
         conversation.labels = None
         response_content = message.Text.Instruction.RE_LABEL
         response.set_content(response_content).send()
-        loggers.log_sent_message(logger, log_prefix, response_content)
+        logger.log_sent_message(response_content)
 
 
 def add_sticker(app, bot, update, conversation):
-    logger = loggers.DATABASE_ADD_STICKER
-    log_prefix = loggers.update_prefix(update)
+    logger = logging.get_logger(logging.Type.DATABASE_ADD_STICKER,
+                                update.update_id)
 
     user = update.effective_user
     chat_id = update.effective_chat.id
@@ -375,7 +368,7 @@ def add_sticker(app, bot, update, conversation):
             response = message.Message(bot, update, logger, chat_id)
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            loggers.log_sent_message(logger, log_prefix, response_content)
+            logger.log_sent_message(response_content)
 
             models.database.session.rollback()
             conversation.rollback_state()
@@ -422,23 +415,22 @@ def create_inline_query_handler(app):
 def create_chosen_inline_result_handler(app):
     @run_async
     def chosen_inline_result_handler(bot, update):
-        logger = loggers.HANDLER_CHOSEN_INLINE_RESULT
-        log_prefix = loggers.update_prefix(update)
-        loggers.logger_start(logger, update.update_id)
+        logger = logging.get_logger(logging.Type.HANDLER_CHOSEN_INLINE_RESULT,
+                                    update.update_id)
+        logger.log_start()
 
         user = update.effective_user
         chosen_inline_result = update.chosen_inline_result
         sticker_id = StickerResult.unwrap(chosen_inline_result.result_id)
         labels = chosen_inline_result.query.split()
 
-        logger.debug(log_prefix + "Query: " + chosen_inline_result.query)
-        logger.debug(log_prefix + "Labels: " + str(labels))
+        logger.debug("Query: " + chosen_inline_result.query)
+        logger.debug("Labels: " + str(labels))
 
         models.Association.increment_usage(user.id, sticker_id, labels)
 
-        logger.debug(
-            log_prefix + "Incremented usage for user " + str(user.id) +
-            "'s sticker " + str(sticker_id))
+        logger.debug("Incremented usage for user " + str(user.id) +
+                     "'s sticker " + str(sticker_id))
 
     return chosen_inline_result_handler
 

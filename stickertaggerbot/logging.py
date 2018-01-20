@@ -44,11 +44,11 @@ class Logger(logging.getLoggerClass()):
     def log_conversation_not_found(self, user_id):
         self.debug("Conversation for user " + str(user_id) + " not found")
 
-    def log_sent_message(self, message):
-        self.debug("Sent " + message.name + " message")
+    def log_sent_message(self, message_string):
+        self.debug("Sent: " + message_string)
 
-    def log_error(self):
-        pass
+    def log_sent_sticker(self, sticker_id):
+        self.debug("Sent sticker: " + str(sticker_id))
 
 
 logging.setLoggerClass(Logger)

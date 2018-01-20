@@ -81,7 +81,6 @@ def create_command_start_handler(app):
 
         response_content = message.Text.Instruction.START
         response.set_content(response_content).send()
-        logger.log_sent_message(response_content)
 
     return command_start_handler
 
@@ -124,7 +123,6 @@ def create_sticker_handler(app):
 
             response_content = message.Text.Error.RESTART
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             return
 
         logger.debug("Entered STICKER state")
@@ -133,21 +131,17 @@ def create_sticker_handler(app):
         if new_sticker:
             response_content = message.Text.Instruction.LABEL
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             conversation.sticker = sticker
         elif new_sticker is False:
             logger.debug("Sticker exists")
             response_content = message.Text.Error.STICKER_EXISTS
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             # TODO Ask user if they meant to change the sticker's labels
             conversation.rollback_state()
         else:
             logger.debug("Future timed out")
-
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             conversation.rollback_state()
 
     return sticker_handler
@@ -176,7 +170,6 @@ def create_labels_handler(app):
             logger.log_conversation_not_found(user.id)
             response_content = message.Text.Error.NOT_STARTED
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             return
 
         try:
@@ -188,7 +181,6 @@ def create_labels_handler(app):
                 state, conversations.Conversation.State.LABEL)
             response_content = message.Text.Error.RESTART
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             return
 
         sticker = conversation.sticker
@@ -200,7 +192,6 @@ def create_labels_handler(app):
 
             response_content = message.Text.Error.LABEL_MISSING
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
 
             conversation.rollback_state()
             return
@@ -271,7 +262,6 @@ def create_callback_handler(app):
             logger.log_conversation_not_found(user.id)
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             return
 
         if callback_data.state == conversations.Conversation.State.LABEL:
@@ -296,7 +286,6 @@ def handle_callback_for_labels(app, bot, update):
         logger.log_conversation_not_found(update.effective_user.id)
         response_content = message.Text.Error.UNKNOWN
         response.set_content(response_content).send()
-        logger.log_sent_message(response_content)
         return
 
     if callback_data.button_text == CallbackData.ButtonText.CONFIRM:
@@ -311,20 +300,17 @@ def handle_callback_for_labels(app, bot, update):
 
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             return
 
         added = add_sticker(app, bot, update, conversation)
         if not added:
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
             conversation.rollback_state()
             return
 
         response_content = message.Text.Other.SUCCESS
         response.set_content(response_content).send()
-        logger.log_sent_message(message.Text.Other.SUCCESS)
 
         try:
             conversation.change_state(conversations.Conversation.State.IDLE)
@@ -340,7 +326,6 @@ def handle_callback_for_labels(app, bot, update):
         conversation.labels = None
         response_content = message.Text.Instruction.RE_LABEL
         response.set_content(response_content).send()
-        logger.log_sent_message(response_content)
 
 
 def add_sticker(app, bot, update, conversation):
@@ -368,7 +353,6 @@ def add_sticker(app, bot, update, conversation):
             response = message.Message(bot, update, logger, chat_id)
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
-            logger.log_sent_message(response_content)
 
             models.database.session.rollback()
             conversation.rollback_state()

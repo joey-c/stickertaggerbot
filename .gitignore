@@ -1,6 +1,7 @@
 .idea/
 certs/
 *log
+*.env
 
 # Created by https://www.gitignore.io/api/python
 

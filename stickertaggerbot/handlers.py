@@ -241,7 +241,7 @@ def generate_inline_keyboard_markup(callback_data_generator, button_texts):
         button_row = []
         for button_text in row:
             button = telegram.InlineKeyboardButton(
-                button_text,
+                button_text.value,
                 callback_data=callback_data_generator(button_text))
             button_row.append(button)
         buttons.append(button_row)

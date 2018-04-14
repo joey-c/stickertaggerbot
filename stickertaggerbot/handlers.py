@@ -114,9 +114,10 @@ def create_sticker_handler(app):
         try:
             conversation.change_state(
                 conversations.Conversation.State.STICKER,
-                pool.submit(sticker_is_new, app, user, sticker))
+                pool.submit(sticker_is_new, app, user, sticker), force=True)
         except ValueError as e:
             # TODO Ask user if they want to cancel previous conversation
+            # Currently should not enter this branch
             state, = e.args
             logger.log_failed_to_change_conversation_state(
                 state, conversations.Conversation.State.STICKER)

@@ -7,21 +7,29 @@ import telegram.error
 
 class Text(object):
     class Instruction(Enum):
-        START = ""
-        LABEL = ""
-        RE_LABEL = ""
-        CONFIRM = ""
+        START = "Hi! I can remember stickers and your labels for them. " + \
+                "You can easily search and send your stickers with me. " + \
+                "Try it now! Send me a sticker you want to label."
+        LABEL = "Great! Now, send me label(s). " + \
+                "Labels must be separated by spaces."
+        RE_LABEL = "Please send your label(s) again."
+        CONFIRM = "Label(s) received:\n"
 
     class Error(Enum):
-        NOT_STARTED = ""
-        STICKER_EXISTS = ""
-        UNKNOWN = ""
+        NOT_STARTED = "Please send a sticker to start labelling."
+        STICKER_EXISTS = "This sticker has already been labelled. " + \
+                         "Please label another sticker. " + \
+                         "Editing and viewing of labels are not yet supported."
+        UNKNOWN = "An unknown error has occurred. Please try again later."
         RESTART = ""  # TODO Prompt to cancel or resume previous chain
-        LABEL_MISSING = ""
-        NO_MATCHES = ""
+        LABEL_MISSING = "No labels were detected. Please send again. " + \
+                        "Labels must be separated by spaces, tabs or line breaks."
+        NO_MATCHES = "No stickers were found. " + \
+                     "Send me a sticker to start labelling it!"
 
     class Other(Enum):
-        SUCCESS = ""
+        SUCCESS = "Your sticker is labelled! " + \
+                  "You can now use @stickertaggerbot <label> to find it"
 
     types = (Instruction, Error, Other)
 

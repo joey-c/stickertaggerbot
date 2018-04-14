@@ -9,6 +9,10 @@ from stickertaggerbot import conversations, models, config, logging, message
 pool = concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_WORKERS)
 
 
+# TODO Add HELP
+# TODO Add EDIT
+# TODO Add DELETE
+# TODO Add CHECK - what labels does a sticker already have?
 # TODO Consider moving classes into another file
 
 class CallbackData(object):

@@ -172,7 +172,7 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(None)):
             run_handler(handlers.create_labels_handler, update)
 
-        assert_sent_message_once(message.Text.Error.NOT_STARTED.value)
+        assert_sent_message_once(message.Text.Error.NOT_STARTED)
 
     def test_interrupted_conversation(self, conversation):
         conversation.change_state = mock.Mock(
@@ -183,7 +183,7 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        assert_sent_message_once(message.Text.Error.RESTART.value)
+        assert_sent_message_once(message.Text.Error.RESTART)
 
     def test_empty_labels(self, conversation):
         conversation.labels = None
@@ -192,7 +192,7 @@ class TestLabelsHandler(object):
         with mock.patch(*get_or_create(conversation)):
             run_handler(handlers.create_labels_handler, update)
 
-        assert_sent_message_once(message.Text.Error.LABEL_MISSING.value)
+        assert_sent_message_once(message.Text.Error.LABEL_MISSING)
 
     def test_one_label(self, conversation):
         label = "label"

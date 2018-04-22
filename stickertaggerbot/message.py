@@ -14,6 +14,7 @@ class Text(object):
                 "Labels must be separated by spaces."
         RE_LABEL = "Please send your label(s) again."
         CONFIRM = "Label(s) received:\n"
+        HELP = START
 
     class Error(Enum):
         NOT_STARTED = "Please send a sticker to start labelling."

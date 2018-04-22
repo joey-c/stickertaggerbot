@@ -424,6 +424,21 @@ def create_chosen_inline_result_handler(app):
     return chosen_inline_result_handler
 
 
+def create_help_handler(app):
+    @run_async
+    def help_handler(bot, update):
+        logger = logging.get_logger(logging.Type.HANDLER_HELP,
+                                    update.update_id)
+        logger.log_start()
+
+        chat_id = update.effective_chat.id
+
+        response = message.Message(bot, update, logger, chat_id)
+        response_content = message.Text.Instruction.HELP
+        response.set_content(response_content).send()
+
+    return help_handler
+
 # TODO Handle unrecognized commands
 def register_handlers(dispatcher, app):
     dispatcher.add_handler(
@@ -443,3 +458,7 @@ def register_handlers(dispatcher, app):
 
     dispatcher.add_handler(
         telegram.ext.InlineQueryHandler(create_inline_query_handler(app)))
+
+    dispatcher.add_handler(
+        telegram.ext.CommandHandler("help",
+                                    create_command_start_handler(app)))

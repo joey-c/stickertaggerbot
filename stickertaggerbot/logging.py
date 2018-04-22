@@ -20,6 +20,7 @@ class Type(Enum):
     HANDLER_CALLBACK_QUERY_LABELS = "handler.callback_query.labels"
     HANDLER_INLINE_QUERY = "handler.inline_query"
     HANDLER_CHOSEN_INLINE_RESULT = "handler.chosen_inline_result"
+    HANDLER_HELP = "handler.help"
 
 
 def get_logger(logger_type, update_id=None):

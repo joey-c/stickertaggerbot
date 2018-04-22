@@ -453,3 +453,22 @@ class TestChosenInlineResultHandler(object):
     # Nonexistent labels are currently ignored at increment_usage
     def test_nonexistent_labels(self):
         pass
+
+
+class TestHelpHandler(object):
+    @pytest.fixture(autouse=True)
+    def patch_telegram(self):
+        patches = outgoing_message_patches
+
+        for patch in patches:
+            patch.start()
+        yield
+        for patch in patches:
+            patch.stop()
+
+    def test_help(self):
+        update = telegram_factories.CommandUpdateFactory(
+            message__command="help")
+
+        run_handler(handlers.create_command_start_handler, update)
+        assert_sent_message_once(message.Text.Instruction.HELP)

@@ -5,7 +5,8 @@ import flask
 import telegram
 import telegram.ext
 
-from stickertaggerbot import config, handlers, models
+from stickertaggerbot import config, models
+from stickertaggerbot.handlers import handlers
 
 
 class Application(flask.Flask):

@@ -2,7 +2,11 @@ import time
 import pytest
 from unittest import mock
 
-from stickertaggerbot import config, models, conversations, handlers, message
+import stickertaggerbot.callback_data
+import stickertaggerbot.handlers.callbacks
+import stickertaggerbot.sticker_result
+from stickertaggerbot import config, models, conversations, message
+from stickertaggerbot.handlers import handlers
 
 from tests import telegram_factories
 from tests.misc import app_for_testing, clear_all_tables
@@ -97,10 +101,10 @@ class TestNormalUsage(object):
             self.chat.id, self.sticker)
 
     def test_confirm(self):
-        callback_data = handlers.CallbackData(
+        callback_data = stickertaggerbot.callback_data.CallbackData(
             conversations.Conversation.State.LABEL, self.sticker.file_id)
         callback_data_text = callback_data.generator(
-            handlers.CallbackData.ButtonText.CONFIRM)
+            stickertaggerbot.callback_data.CallbackData.ButtonText.CONFIRM)
 
         update = telegram_factories.CallbackQueryUpdateFactory(
             callback_query__from_user=self.user,
@@ -129,6 +133,6 @@ class TestNormalUsage(object):
         post(update)
         time.sleep(2)
 
-        result = [handlers.StickerResult(self.sticker.file_id)]
+        result = [stickertaggerbot.sticker_result.StickerResult(self.sticker.file_id)]
         app_for_testing.bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id, result, is_personal=True)

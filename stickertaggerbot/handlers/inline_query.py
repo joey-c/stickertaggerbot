@@ -24,6 +24,7 @@ def create_inline_query_handler(app):
                 message.Text.Inline.CHAT_TO_START.value)
             query.answer(results=[result],
                          is_personal=True,
+                         cache_time=2,
                          switch_pm_text=message.Text.Inline.START_BUTTON.value)
             return
 
@@ -37,7 +38,8 @@ def create_inline_query_handler(app):
                 message.Text.Inline.NO_RESULTS.value,
                 message.Text.Inline.CHAT_TO_LABEL.value)
             query.answer(results=[result],
-                         is_personal=True)
+                         is_personal=True,
+                         cache_time=2)
             return
 
         sticker_results = [inline_query_result.Sticker(sticker)

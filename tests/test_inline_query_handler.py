@@ -57,6 +57,7 @@ class TestInlineQueryHandler(object):
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
             results=[result],
+            cache_time=2,
             is_personal=True,
             switch_pm_text=message.Text.Inline.START_BUTTON.value)
 
@@ -81,6 +82,7 @@ class TestInlineQueryHandler(object):
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
             results=[result],
+            cache_time=2,
             is_personal=True)
 
     def test_one_label(self):

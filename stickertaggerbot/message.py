@@ -32,6 +32,13 @@ class Text(object):
         SUCCESS = "Your sticker is labelled! " + \
                   "You can now use @stickertaggerbot <label> to find it"
 
+    class Inline(Enum):
+        NOT_STARTED = "You have not labelled any stickers."
+        START_BUTTON = "Start"
+        NO_RESULTS = "No results found."
+        CHAT_TO_START = "Chat with me to start labelling!"
+        CHAT_TO_LABEL = "Chat with me to label stickers!"
+
     types = (Instruction, Error, Other)
 
 

@@ -14,3 +14,11 @@ class Sticker(telegram.InlineQueryResultCachedSticker):
     @classmethod
     def unwrap(cls, result_id):
         return result_id
+
+
+class Text(telegram.InlineQueryResultArticle):
+    def __init__(self, update_id, text, subtitle):
+        message_content = telegram.InputTextMessageContent(subtitle)
+        super().__init__(id=update_id,
+                         title=text,
+                         input_message_content=message_content)

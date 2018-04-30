@@ -2,9 +2,9 @@ import telegram
 
 
 # TODO Consider other implementations of result_id
-class StickerResult(telegram.InlineQueryResultCachedSticker):
+class Sticker(telegram.InlineQueryResultCachedSticker):
     def __init__(self, sticker_id):
-        super().__init__(StickerResult.generate_result_id(sticker_id),
+        super().__init__(Sticker.generate_result_id(sticker_id),
                          sticker_id)
 
     @classmethod

@@ -4,7 +4,7 @@ from unittest import mock
 
 import stickertaggerbot.callback_data
 import stickertaggerbot.handlers.callbacks
-import stickertaggerbot.sticker_result
+import stickertaggerbot.inline_query_result
 from stickertaggerbot import config, models, conversations, message
 from stickertaggerbot.handlers import handlers
 
@@ -133,6 +133,6 @@ class TestNormalUsage(object):
         post(update)
         time.sleep(2)
 
-        result = [stickertaggerbot.sticker_result.StickerResult(self.sticker.file_id)]
+        result = [stickertaggerbot.inline_query_result.Sticker(self.sticker.file_id)]
         app_for_testing.bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id, result, is_personal=True)

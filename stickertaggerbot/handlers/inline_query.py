@@ -1,6 +1,7 @@
 from telegram.ext import run_async
 
-from stickertaggerbot import models, message, StickerResult
+from stickertaggerbot import models, message
+import stickertaggerbot.inline_query_result as inline_query_result
 
 
 # TODO Add deep-linking parameters
@@ -30,7 +31,8 @@ def create_inline_query_handler(app):
                          switch_pm_text=message.Text.Error.NO_MATCHES.value)
             return
 
-        sticker_results = [StickerResult(sticker) for sticker in stickers]
+        sticker_results = [inline_query_result.Sticker(sticker)
+                           for sticker in stickers]
         query.answer(sticker_results, is_personal=True)
 
     return inline_query_handler

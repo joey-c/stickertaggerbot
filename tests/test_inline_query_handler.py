@@ -4,7 +4,7 @@ import pytest
 
 from stickertaggerbot import message
 from stickertaggerbot.handlers import inline_query
-from stickertaggerbot.sticker_result import StickerResult
+import stickertaggerbot.inline_query_result as inline_query_result
 from tests import telegram_factories
 from tests.misc import run_handler, bot
 
@@ -76,12 +76,12 @@ class TestInlineQueryHandler(object):
             inline_query__bot=bot)
 
         sticker_id = telegram_factories.StickerFactory().file_id
-        sticker_result = StickerResult(sticker_id)
+        sticker_result = inline_query_result.Sticker(sticker_id)
 
         with mock.patch(
                 base_patch_path + ".models.Association.get_sticker_ids",
                 mock.MagicMock(autospec=True, return_value=[sticker_id])), \
-             mock.patch(base_patch_path + ".StickerResult",
+             mock.patch(base_patch_path + ".inline_query_result.Sticker",
                         mock.MagicMock(return_value=sticker_result)):
             run_handler(inline_query.create_inline_query_handler, update)
 

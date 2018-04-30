@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from stickertaggerbot.handlers import chosen_inline_result
-from stickertaggerbot.sticker_result import StickerResult
+from stickertaggerbot.inline_query_result import Sticker
 from tests import telegram_factories
 from tests.misc import run_handler
 
@@ -24,7 +24,7 @@ class TestChosenInlineResultHandler(object):
         query_string = "label_0"
         sticker_id = "sticker_0"
 
-        result_id = StickerResult.generate_result_id(sticker_id)
+        result_id = Sticker.generate_result_id(sticker_id)
         update = telegram_factories.ChosenInlineResultUpdateFactory(
             chosen_inline_result__query=query_string,
             chosen_inline_result__result_id=result_id)
@@ -41,7 +41,7 @@ class TestChosenInlineResultHandler(object):
         sticker_id = "sticker_0"
 
         query_string = " ".join(labels)
-        result_id = StickerResult.generate_result_id(sticker_id)
+        result_id = Sticker.generate_result_id(sticker_id)
         update = telegram_factories.ChosenInlineResultUpdateFactory(
             chosen_inline_result__query=query_string,
             chosen_inline_result__result_id=result_id)

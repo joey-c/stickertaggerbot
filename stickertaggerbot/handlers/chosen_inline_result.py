@@ -1,6 +1,7 @@
 from telegram.ext import run_async
 
-from stickertaggerbot import logging, models, StickerResult
+from stickertaggerbot import logging, models
+from stickertaggerbot.inline_query_result import Sticker as StickerResult
 
 
 # TODO: Consider adding soft labels – labels in the query that aren't yet

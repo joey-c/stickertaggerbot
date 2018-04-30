@@ -36,11 +36,13 @@ def handle_callback_for_labels(app, bot, update):
 
         added = add_sticker(app, bot, update, conversation)
         if not added:
+            logger.debug("Failed to add sticker")
             response_content = message.Text.Error.UNKNOWN
             response.set_content(response_content).send()
             conversation.rollback_state()
             return
 
+        logger.debug("Added sticker successfully")
         response_content = message.Text.Other.SUCCESS
         response.set_content(response_content).send()
 

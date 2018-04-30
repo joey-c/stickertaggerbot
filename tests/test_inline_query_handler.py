@@ -45,12 +45,20 @@ class TestInlineQueryHandler(object):
             inline_query__query="label",
             inline_query__bot=bot)
 
-        run_handler(inline_query.create_inline_query_handler, update)
+        result = inline_query_result.Text(
+            update.update_id,
+            message.Text.Inline.NOT_STARTED.value,
+            message.Text.Inline.CHAT_TO_START.value)
+
+        with mock.patch(base_patch_path + ".inline_query_result.Text",
+                        mock.MagicMock(autospec=True, return_value=result)):
+            run_handler(inline_query.create_inline_query_handler, update)
 
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
+            results=[result],
             is_personal=True,
-            switch_pm_text=message.Text.Error.NOT_STARTED.value)
+            switch_pm_text=message.Text.Inline.START_BUTTON.value)
 
     @mock.patch(base_patch_path + ".models.Association.get_sticker_ids",
                 mock.MagicMock(autospec=True, return_value=[]))
@@ -61,12 +69,19 @@ class TestInlineQueryHandler(object):
             inline_query__query="label",
             inline_query__bot=bot)
 
-        run_handler(inline_query.create_inline_query_handler, update)
+        result = inline_query_result.Text(
+            update.update_id,
+            message.Text.Inline.NO_RESULTS.value,
+            message.Text.Inline.CHAT_TO_LABEL.value)
+
+        with mock.patch(base_patch_path + ".inline_query_result.Text",
+                        mock.MagicMock(autospec=True, return_value=result)):
+            run_handler(inline_query.create_inline_query_handler, update)
 
         bot.answer_inline_query.assert_called_once_with(
             update.inline_query.id,
-            is_personal=True,
-            switch_pm_text=message.Text.Error.NO_MATCHES.value)
+            results=[result],
+            is_personal=True)
 
     def test_one_label(self):
         self.set_user_association(1)

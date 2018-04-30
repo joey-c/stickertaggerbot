@@ -18,8 +18,13 @@ def create_inline_query_handler(app):
                 user_id=user_id)
 
         if user_associations.count() == 0:
-            query.answer(is_personal=True,
-                         switch_pm_text=message.Text.Error.NOT_STARTED.value)
+            result = inline_query_result.Text(
+                update.update_id,
+                message.Text.Inline.NOT_STARTED.value,
+                message.Text.Inline.CHAT_TO_START.value)
+            query.answer(results=[result],
+                         is_personal=True,
+                         switch_pm_text=message.Text.Inline.START_BUTTON.value)
             return
 
         with app.app_context():
@@ -27,8 +32,12 @@ def create_inline_query_handler(app):
                 user_id, labels, unique=True)
 
         if not stickers:
-            query.answer(is_personal=True,
-                         switch_pm_text=message.Text.Error.NO_MATCHES.value)
+            result = inline_query_result.Text(
+                update.update_id,
+                message.Text.Inline.NO_RESULTS.value,
+                message.Text.Inline.CHAT_TO_LABEL.value)
+            query.answer(results=[result],
+                         is_personal=True)
             return
 
         sticker_results = [inline_query_result.Sticker(sticker)

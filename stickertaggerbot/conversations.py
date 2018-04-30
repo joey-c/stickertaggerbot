@@ -166,7 +166,7 @@ def get_or_create(telegram_user, get_only=False, chat=None):
     with lock:
         logger.debug("Acquired conversations lock")
         if user_id in all:
-            logger.debug("User " + str(user_id) + "found")
+            logger.debug("User " + str(user_id) + " found")
             conversation = all[user_id]
         elif not get_only:
             logger.debug("Creating new conversation")

@@ -1,6 +1,4 @@
 FROM python:3.6
 ADD . /stickertaggerbot/
-WORKDIR /stickertaggerbot
-RUN pip install -r requirements.txt
-ENV FLASK_APP application.py
-CMD ["flask", "run", "--host=0.0.0.0"]
+RUN pip install -r stickertaggerbot/requirements.txt
+CMD ["gunicorn", "--bind=0.0.0.0", "stickertaggerbot.application:application"]
